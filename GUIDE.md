@@ -368,13 +368,10 @@ face-mqtt-servo/
 │   ├── face_lock.py, action_detector.py, face_history_logger.py
 │   └── ...
 ├── pc_vision/           # MQTT movement publisher
-├── backend/              # WebSocket relay
+├── server/              # WebSocket relay
 ├── esp8266/              # MicroPython (config, boot, main)
 ├── dashboard/            # Browser UI
 ├── data/
-│   ├── enroll/          # Per-person crops
-│   ├── db/              # face_db.npz, face_db.json
-│   └── face_histories/   # Action logs
 ├── models/
 │   └── embedder_arcface.onnx
 ├── requirements.txt
@@ -425,7 +422,6 @@ Typical CPU-only: ~3–5 FPS end-to-end (detection + embedding + action).
 
 - [ ] Python 3.9+ and venv created and activated
 - [ ] `pip install -r requirements.txt`
-- [ ] `models/embedder_arcface.onnx` present
 - [ ] `python -m src.camera` works
 - [ ] At least one person enrolled (`python -m src.enroll`)
 - [ ] `python -m src.recognize` and `python -m src.face_lock` work
