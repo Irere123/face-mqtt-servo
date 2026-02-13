@@ -1,0 +1,28 @@
+================================================================================
+Face Locking Session History
+================================================================================
+Face Name: HUMURA
+Session Start: 2026-02-05 16:00:48.767
+File: humura_history_1770300048767.txt
+================================================================================
+Format: [HH:MM:SS.mmm] ACTION_TYPE | description | confidence | value
+================================================================================
+
+[00:00:00.001] STATUS                | Target face selected: Humura
+[00:00:12.319] STATUS                | Lock ACQUIRED for Humura (confidence=0.707)
+[00:00:12.851] SMILE           | Smile/laugh detected (mouth height ratio: 1.29)    | conf=0.90 | val=1.2916
+[00:00:14.553] STATUS                | Lock RE-ACQUIRED for Humura
+[00:00:14.840] SMILE           | Smile/laugh detected (mouth height ratio: 3.38)    | conf=0.90 | val=3.3803
+[00:00:14.840] MOVE_LEFT       | Head movement left (24.2px)                        | conf=0.95 | val=24.2204
+[00:00:20.205] MOVE_LEFT       | Head movement left (8.4px)                         | conf=0.42 | val=8.4171
+[00:00:22.475] STATUS                | Lock RE-ACQUIRED for Humura
+[00:00:23.002] SMILE           | Smile/laugh detected (mouth height ratio: 1.16)    | conf=0.90 | val=1.1586
+[00:00:23.002] MOVE_LEFT       | Head movement left (46.2px)                        | conf=0.95 | val=46.2260
+[00:00:27.417] STATUS                | Lock RE-ACQUIRED for Humura
+[00:00:27.779] MOVE_RIGHT      | Head movement right (40.8px)                       | conf=0.95 | val=40.8111
+[00:00:27.779] FACE_CLOSER     | Face moved closer to camera (scale ratio: 1.16)    | conf=0.85 | val=1.1602
+
+================================================================================
+Session ended at 2026-02-05 16:01:21.700
+Total actions recorded: 8
+================================================================================

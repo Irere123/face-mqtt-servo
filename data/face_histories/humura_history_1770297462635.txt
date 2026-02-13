@@ -1,0 +1,31 @@
+================================================================================
+Face Locking Session History
+================================================================================
+Face Name: HUMURA
+Session Start: 2026-02-05 15:17:42.635
+File: humura_history_1770297462635.txt
+================================================================================
+Format: [HH:MM:SS.mmm] ACTION_TYPE | description | confidence | value
+================================================================================
+
+[00:00:00.001] STATUS                | Target face selected: Humura
+[00:00:01.219] STATUS                | Lock ACQUIRED for Humura (confidence=0.719)
+[00:00:01.566] STATUS                | Lock RE-ACQUIRED for Humura
+[00:00:02.095] STATUS                | Lock RE-ACQUIRED for Humura
+[00:00:02.665] STATUS                | Lock RE-ACQUIRED for Humura
+[00:00:03.347] STATUS                | Lock RE-ACQUIRED for Humura
+[00:00:03.936] STATUS                | Lock RE-ACQUIRED for Humura
+[00:00:04.316] SMILE           | Smile/laugh detected (mouth height ratio: 1.15)    | conf=0.90 | val=1.1518
+[00:00:04.724] STATUS                | Lock RE-ACQUIRED for Humura
+[00:00:08.666] STATUS                | Lock RE-ACQUIRED for Humura
+[00:00:08.949] FACE_CLOSER     | Face moved closer to camera (scale ratio: 1.24)    | conf=0.85 | val=1.2434
+[00:00:09.236] SMILE           | Smile/laugh detected (mouth height ratio: 1.27)    | conf=0.90 | val=1.2740
+[00:00:09.524] SMILE           | Smile/laugh detected (mouth height ratio: 1.48)    | conf=0.90 | val=1.4829
+[00:00:10.987] STATUS                | Lock RE-ACQUIRED for Humura
+[00:00:11.267] MOVE_LEFT       | Head movement left (24.9px)                        | conf=0.95 | val=24.9370
+[00:00:11.546] MOVE_LEFT       | Head movement left (15.4px)                        | conf=0.77 | val=15.4483
+
+================================================================================
+Session ended at 2026-02-05 15:18:21.239
+Total actions recorded: 6
+================================================================================

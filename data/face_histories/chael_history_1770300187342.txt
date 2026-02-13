@@ -1,0 +1,28 @@
+================================================================================
+Face Locking Session History
+================================================================================
+Face Name: CHAEL
+Session Start: 2026-02-05 16:03:07.342
+File: chael_history_1770300187342.txt
+================================================================================
+Format: [HH:MM:SS.mmm] ACTION_TYPE | description | confidence | value
+================================================================================
+
+[00:00:00.001] STATUS                | Target face selected: Chael
+[00:01:13.246] STATUS                | Lock ACQUIRED for Chael (confidence=0.704)
+[00:01:14.042] SMILE           | Smile/laugh detected (mouth height ratio: 1.11)    | conf=0.71 | val=1.1060
+[00:01:14.732] STATUS                | Lock RE-ACQUIRED for Chael
+[00:01:15.019] SMILE           | Smile/laugh detected (mouth height ratio: 1.12)    | conf=0.77 | val=1.1154
+[00:01:17.040] STATUS                | Lock RE-ACQUIRED for Chael
+[00:01:21.648] STATUS                | Lock RE-ACQUIRED for Chael
+[00:01:22.522] STATUS                | Lock RE-ACQUIRED for Chael
+[00:01:23.126] SMILE           | Smile/laugh detected (mouth height ratio: 1.18)    | conf=0.90 | val=1.1837
+[00:01:24.383] STATUS                | Lock RE-ACQUIRED for Chael
+[00:01:24.650] MOVE_RIGHT      | Head movement right (25.5px)                       | conf=0.95 | val=25.5281
+[00:01:28.468] STATUS                | Lock RE-ACQUIRED for Chael
+[00:01:29.376] MOVE_RIGHT      | Head movement right (12.0px)                       | conf=0.60 | val=12.0183
+
+================================================================================
+Session ended at 2026-02-05 16:04:52.932
+Total actions recorded: 5
+================================================================================
