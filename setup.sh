@@ -1,5 +1,5 @@
 #!/bin/bash
-# setup_face_locking.sh
+# setup.sh
 # Quick setup script for Face Locking system
 
 set -e  # Exit on error
