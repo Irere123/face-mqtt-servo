@@ -40,11 +40,35 @@ face-mqtt-servo/
 
 ---
 
-## Requirements
+## Dependencies
 
-- Python 3.9+
-- Webcam
-- (Optional) ESP8266, servo, Mosquitto — for live servo tracking
+| Component | Requirements |
+|-----------|--------------|
+| **PC / Vision** | Python 3.9+, webcam, `pip install -r requirements.txt` (includes OpenCV, MediaPipe, ONNX Runtime, **paho-mqtt** for MQTT). See [GUIDE.md](GUIDE.md) for ArcFace model download. |
+| **Backend (VPS)** | Python 3.x, `pip install -r backend/requirements.txt` (paho-mqtt, websockets). Mosquitto broker on same host (port 1883). |
+| **ESP8266** | MicroPython, WiFi. On device: `mip.install('umqtt.simple')`. |
+| **Dashboard** | Modern browser; no extra deps. When served over HTTP(S), connects to WebSocket on same host; for local file use it defaults to `ws://127.0.0.1:9002`. |
+
+---
+
+## How to run each component
+
+1. **Broker (VPS or local):** Start Mosquitto on port 1883 (see [GUIDE.md](GUIDE.md) or [docs/SETUP_COMMANDS.md](docs/SETUP_COMMANDS.md)).
+2. **Backend relay (VPS):** `python backend/ws_relay.py` — listens on port 9002, subscribes to `vision/<TEAM_ID>/movement`.
+3. **PC Vision:** Enroll faces first (`python -m src.enroll`), then `python -m pc_vision.main`; set broker IP and `TEAM_ID` in `pc_vision/config.py`.
+4. **Dashboard:** Open `dashboard/index.html` in a browser (file or served). For submission: host the dashboard (e.g. serve `dashboard/` on the VPS or another host); it will connect to the relay on that host, or edit the WebSocket URL in the file to `ws://YOUR_VPS_IP:9002`. Submit that dashboard URL in the form.
+5. **ESP8266:** Upload `config.py`, `boot.py`, `main.py`; set WiFi, broker IP, and `TEAM_ID` in `config.py`. Power on; it subscribes and drives the servo.
+
+---
+
+## Evaluation focus / Submission checklist
+
+- **MQTT & WebSocket:** PC and ESP use MQTT only; dashboard uses WebSocket only; backend relays MQTT → WebSocket (no polling).
+- **Topic isolation:** Unique `TEAM_ID` in all three configs; no generic topics or wildcard subscriptions.
+- **End-to-end:** Vision → MQTT → broker → ESP (servo) and broker → relay → dashboard (real-time).
+- **Real-time:** Anti-flooding (publish on state change + min interval); no noticeable delay or message flooding.
+- **Servo:** Smooth step movement; `NO_FACE` holds position; no uncontrolled jitter.
+- **Repo:** Public, structured, README with architecture, topics, setup, dependencies, and run instructions.
 
 ---
 
@@ -59,6 +83,8 @@ All installation, deployment, and run instructions are in **GUIDE.md**.
 ---
 
 ## Phase 1: Distributed vision–control (face-locked servo)
+
+*Distributed Vision-Control System (Face-Locked Servo).* Golden rule: *Vision computes. Devices speak MQTT. Browsers speak WebSocket. The backend relays in real time.*
 
 Phase 1 is **open-loop**: the PC publishes face movement (left/right/centered) over MQTT; the ESP8266 subscribes and drives a pan servo. Optionally a WebSocket relay pushes the same stream to a browser dashboard.
 
@@ -91,9 +117,11 @@ Phase 1 is **open-loop**: the PC publishes face movement (left/right/centered) o
 
 | Topic                     | Publisher | Subscribers   | Payload example |
 |---------------------------|----------|---------------|------------------|
-| `vision/team01/movement` | PC Vision| ESP8266, relay| `{"status":"MOVE_LEFT","confidence":0.87,"timestamp":1730000000}` |
+| `vision/dragonfly/movement` | PC Vision| ESP8266, relay| `{"status":"MOVE_LEFT","confidence":0.87,"timestamp":1730000000}` |
 
 Movement states: `MOVE_LEFT`, `MOVE_RIGHT`, `CENTERED`, `NO_FACE`.
+
+**Topic isolation (required on shared broker):** Each team must use a **unique** `TEAM_ID` (this repo uses `dragonfly`; e.g. `team01`, `alpha`, `y3_grp2`) in `pc_vision/config.py`, `backend/ws_relay.py`, and `esp8266/config.py`. Do **not** use generic topics (`vision/movement`, `movement`, `servo`) or wildcard subscriptions (`vision/#`, `#`). Do not publish or subscribe to another team’s namespace.
 
 ### How it works
 
@@ -118,10 +146,10 @@ Full step-by-step: **[GUIDE.md](GUIDE.md)** Part 7 (Phase 1).
 
 ```bash
 # Subscribe
-mosquitto_sub -h 127.0.0.1 -t "vision/team01/movement" -v
+mosquitto_sub -h 127.0.0.1 -t "vision/dragonfly/movement" -v
 
 # Publish (other terminal)
-mosquitto_pub -h 127.0.0.1 -t "vision/team01/movement" \
+mosquitto_pub -h 127.0.0.1 -t "vision/dragonfly/movement" \
   -m '{"status":"MOVE_LEFT","confidence":0.87,"timestamp":1730000000}'
 ```
 

@@ -8,8 +8,9 @@ Everything you need to do **by hand** before the system works.
 
 ```
 SSH into VPS:
-    ssh user323@157.173.101.159
-    Password: 12345678
+    ssh user334@157.173.101.159
+
+When prompted, enter the password provided by your instructor (you may be asked to change it on first login).
 ```
 
 **Install Mosquitto broker:**
@@ -46,7 +47,7 @@ ss -tlnp | grep 1883
 Upload the `backend/` folder to the VPS (e.g., via `scp`):
 ```bash
 # From your PC:
-scp -r backend/ user323@157.173.101.159:~/backend/
+scp -r backend/ user334@157.173.101.159:~/backend/
 ```
 
 On the VPS:

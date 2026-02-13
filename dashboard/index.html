@@ -1,257 +1,327 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Face Tracking Dashboard — team01</title>
+    <title>Face Tracking — dragonfly</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
-        /* ─── Reset & Base ──────────────────────────────────────── */
-        *,
-        *::before,
-        *::after {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
+        :root {
+            --bg: #0a0c10;
+            --surface: #111318;
+            --surface-elevated: #181b23;
+            --border: #1e232d;
+            --border-subtle: #252b36;
+            --text: #e2e6ec;
+            --text-muted: #6b7280;
+            --text-dim: #4b5260;
+            --accent: #e4a853;
+            --accent-dim: rgba(228, 168, 83, 0.15);
+            --left: #e07c4a;
+            --right: #5b9bd5;
+            --centered: #4caf7a;
+            --no-face: #4b5260;
+            --connected: #4caf7a;
+            --disconnected: #c75c5c;
+            --connecting: #c9a227;
+            --radius: 10px;
+            --radius-sm: 6px;
         }
 
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
         body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background: #0d1117;
-            color: #c9d1d9;
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg);
+            color: var(--text);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
+            font-size: 15px;
+            -webkit-font-smoothing: antialiased;
         }
 
-        /* ─── Header ────────────────────────────────────────────── */
+        /* Header */
         header {
             width: 100%;
-            background: linear-gradient(135deg, #161b22 0%, #1a2233 100%);
-            border-bottom: 1px solid #30363d;
-            padding: 18px 32px;
+            max-width: 720px;
+            padding: 20px 24px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            border-bottom: 1px solid var(--border);
         }
 
         header h1 {
-            font-size: 1.3rem;
             font-weight: 600;
-            color: #58a6ff;
+            font-size: 1.15rem;
+            letter-spacing: -0.02em;
+            color: var(--text);
         }
 
         .conn-badge {
-            padding: 5px 14px;
-            border-radius: 20px;
-            font-size: 0.82rem;
-            font-weight: 600;
-            letter-spacing: 0.04em;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            border-radius: 100px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            letter-spacing: 0.02em;
+        }
+
+        .conn-badge .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .conn-badge.connected .dot {
+            animation: pulse 2s ease-in-out infinite;
         }
 
         .conn-badge.connected {
-            background: #1b4332;
-            color: #40c057;
+            background: rgba(76, 175, 122, 0.12);
+            color: var(--connected);
         }
 
         .conn-badge.disconnected {
-            background: #3d1f1f;
-            color: #f87171;
+            background: rgba(199, 92, 92, 0.12);
+            color: var(--disconnected);
         }
 
         .conn-badge.connecting {
-            background: #3d3520;
-            color: #fbbf24;
+            background: rgba(201, 162, 39, 0.12);
+            color: var(--connecting);
         }
 
-        /* ─── Main Grid ─────────────────────────────────────────── */
-        .grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* Main */
+        main {
             width: 100%;
-            max-width: 800px;
+            max-width: 720px;
             padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
         }
 
-        /* ─── Card ──────────────────────────────────────────────── */
+        .row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+
         .card {
-            background: #161b22;
-            border: 1px solid #30363d;
-            border-radius: 12px;
-            padding: 20px 24px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 18px 20px;
+            transition: border-color 0.2s ease;
         }
 
-        .card h2 {
-            font-size: 0.78rem;
+        .card:focus-within { border-color: var(--border-subtle); }
+
+        .card-label {
+            font-size: 0.7rem;
+            font-weight: 500;
             text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: #8b949e;
-            margin-bottom: 10px;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            margin-bottom: 6px;
         }
 
-        .card .value {
-            font-size: 2rem;
-            font-weight: 700;
+        .card-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.35rem;
+            font-weight: 500;
+            letter-spacing: -0.02em;
         }
 
-        /* ─── Status-specific colors ────────────────────────────── */
-        .status-MOVE_LEFT {
-            color: #f9826c;
-        }
+        .card-value.status-MOVE_LEFT { color: var(--left); }
+        .card-value.status-MOVE_RIGHT { color: var(--right); }
+        .card-value.status-CENTERED { color: var(--centered); }
+        .card-value.status-NO_FACE,
+        .card-value.status-UNKNOWN { color: var(--no-face); }
 
-        .status-MOVE_RIGHT {
-            color: #79c0ff;
-        }
-
-        .status-CENTERED {
-            color: #56d364;
-        }
-
-        .status-NO_FACE {
-            color: #8b949e;
-        }
-
-        /* ─── Servo Visualization ───────────────────────────────── */
-        .servo-vis {
-            grid-column: 1 / -1;
+        /* Servo direction block */
+        .servo-block {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px 28px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 28px;
+            gap: 16px;
         }
 
-        .servo-vis .arrow-bar {
+        .servo-block .card-label {
+            margin-bottom: 0;
+        }
+
+        .servo-indicator {
             display: flex;
             align-items: center;
-            gap: 16px;
-            margin-top: 12px;
+            gap: 24px;
         }
 
-        .arrow {
-            font-size: 2.4rem;
-            transition: opacity 0.2s, transform 0.2s;
-            opacity: 0.2;
-        }
-
-        .arrow.active {
-            opacity: 1;
-            transform: scale(1.15);
-        }
-
-        .face-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            background: #30363d;
+        .servo-arrow {
+            width: 44px;
+            height: 44px;
+            border-radius: var(--radius-sm);
+            background: var(--surface-elevated);
+            border: 1px solid var(--border);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.5rem;
-            transition: box-shadow 0.3s;
+            font-size: 1.4rem;
+            color: var(--text-dim);
+            transition: color 0.2s, background 0.2s, border-color 0.2s, transform 0.15s ease;
         }
 
-        .face-icon.locked {
-            box-shadow: 0 0 0 3px #56d364, 0 0 16px rgba(86, 211, 100, 0.25);
+        .servo-arrow.active {
+            color: var(--accent);
+            background: var(--accent-dim);
+            border-color: rgba(228, 168, 83, 0.35);
+            transform: scale(1.06);
         }
 
-        /* ─── Log ───────────────────────────────────────────────── */
-        .log-card {
-            grid-column: 1 / -1;
+        .servo-face {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: var(--surface-elevated);
+            border: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            transition: border-color 0.25s ease, box-shadow 0.25s ease;
         }
 
-        #log {
-            height: 160px;
+        .servo-face.locked {
+            border-color: var(--centered);
+            box-shadow: 0 0 0 1px var(--centered), 0 0 20px rgba(76, 175, 122, 0.2);
+        }
+
+        /* Log */
+        .log-block {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .log-view {
+            height: 140px;
             overflow-y: auto;
-            font-family: 'Cascadia Code', 'Fira Code', monospace;
-            font-size: 0.78rem;
-            background: #0d1117;
-            border: 1px solid #21262d;
-            border-radius: 8px;
-            padding: 10px;
-            color: #8b949e;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 12px 14px;
+            color: var(--text-muted);
         }
 
-        #log .entry {
-            margin-bottom: 2px;
+        .log-view::-webkit-scrollbar { width: 6px; }
+        .log-view::-webkit-scrollbar-track { background: transparent; }
+        .log-view::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 3px; }
+
+        .log-entry {
+            padding: 2px 0;
+            border-bottom: 1px solid transparent;
+            animation: logIn 0.25s ease;
         }
 
-        #log .entry .ts {
-            color: #484f58;
-            margin-right: 8px;
+        @keyframes logIn {
+            from { opacity: 0; transform: translateY(-2px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
-        /* ─── Footer ────────────────────────────────────────────── */
+        .log-entry .ts {
+            color: var(--text-dim);
+            margin-right: 10px;
+        }
+
         footer {
-            padding: 16px;
+            padding: 14px 24px;
             font-size: 0.72rem;
-            color: #484f58;
+            color: var(--text-dim);
+            border-top: 1px solid var(--border);
+            width: 100%;
+            max-width: 720px;
+            text-align: center;
         }
     </style>
 </head>
-
 <body>
-
-    <!-- Header -->
     <header>
-        <h1>🎯 Face Tracking Dashboard</h1>
-        <span id="connBadge" class="conn-badge connecting">Connecting…</span>
+        <h1>Face Tracking</h1>
+        <span id="connBadge" class="conn-badge connecting"><span class="dot"></span><span id="connText">Connecting…</span></span>
     </header>
 
-    <!-- Cards Grid -->
-    <div class="grid">
-
-        <!-- Movement Status -->
-        <div class="card">
-            <h2>Movement</h2>
-            <div id="statusValue" class="value status-NO_FACE">—</div>
-        </div>
-
-        <!-- Confidence -->
-        <div class="card">
-            <h2>Confidence</h2>
-            <div id="confValue" class="value">—</div>
-        </div>
-
-        <!-- Servo Direction Visualization -->
-        <div class="card servo-vis">
-            <h2>Servo Direction</h2>
-            <div class="arrow-bar">
-                <span id="arrowLeft" class="arrow">◀</span>
-                <div id="faceIcon" class="face-icon">👤</div>
-                <span id="arrowRight" class="arrow">▶</span>
+    <main>
+        <div class="row">
+            <div class="card">
+                <div class="card-label">Movement</div>
+                <div id="statusValue" class="card-value status-NO_FACE">—</div>
+            </div>
+            <div class="card">
+                <div class="card-label">Confidence</div>
+                <div id="confValue" class="card-value">—</div>
+            </div>
+            <div class="card">
+                <div class="card-label">Messages</div>
+                <div id="msgCount" class="card-value">0</div>
             </div>
         </div>
 
-        <!-- Timestamp -->
-        <div class="card">
-            <h2>Last Update</h2>
-            <div id="tsValue" class="value" style="font-size:1.1rem;">—</div>
+        <div class="row">
+            <div class="card">
+                <div class="card-label">Last update</div>
+                <div id="tsValue" class="card-value" style="font-size:1rem;">—</div>
+            </div>
         </div>
 
-        <!-- Messages received -->
-        <div class="card">
-            <h2>Messages</h2>
-            <div id="msgCount" class="value">0</div>
+        <div class="servo-block">
+            <div class="card-label">Servo direction</div>
+            <div class="servo-indicator">
+                <span id="arrowLeft" class="servo-arrow" aria-label="Left">◀</span>
+                <div id="faceIcon" class="servo-face" aria-hidden="true">👤</div>
+                <span id="arrowRight" class="servo-arrow" aria-label="Right">▶</span>
+            </div>
         </div>
 
-        <!-- Log -->
-        <div class="card log-card">
-            <h2>Event Log</h2>
-            <div id="log"></div>
+        <div class="log-block">
+            <div class="card-label">Event log</div>
+            <div id="log" class="log-view" role="log"></div>
         </div>
-    </div>
+    </main>
 
-    <footer>Team team01 · Phase 1 · WebSocket ws://127.0.0.1:9002</footer>
+    <footer id="footerWs">dragonfly · Phase 1</footer>
 
     <script>
-        // ─── Configuration ─────────────────────────────────────────
-        const WS_URL = "ws://127.0.0.1:9002";
+        // WebSocket URL: when dashboard is served via HTTP(S) from same host as relay (e.g. VPS), use that host; for file:// or local testing use localhost. For VPS submission: serve this file (e.g. nginx static) and submit that URL; or set WS_URL below to ws://YOUR_VPS_IP:9002.
+        const WS_URL = (location.host && (location.protocol === 'http:' || location.protocol === 'https:'))
+            ? ('ws' + (location.protocol === 'https:' ? 's' : '') + '://' + location.hostname + ':9002')
+            : 'ws://127.0.0.1:9002';
         const MAX_LOG = 80;
 
-        // ─── DOM refs ──────────────────────────────────────────────
         const $badge = document.getElementById("connBadge");
+        const $connText = document.getElementById("connText");
         const $status = document.getElementById("statusValue");
         const $conf = document.getElementById("confValue");
         const $ts = document.getElementById("tsValue");
@@ -264,17 +334,16 @@
         let messageCount = 0;
         let ws = null;
 
-        // ─── WebSocket Logic ───────────────────────────────────────
         function connect() {
             $badge.className = "conn-badge connecting";
-            $badge.textContent = "Connecting…";
+            $connText.textContent = "Connecting…";
 
             ws = new WebSocket(WS_URL);
 
             ws.onopen = () => {
                 $badge.className = "conn-badge connected";
-                $badge.textContent = "Connected";
-                addLog("WebSocket connected to " + WS_URL);
+                $connText.textContent = "Connected";
+                addLog("WebSocket connected");
             };
 
             ws.onmessage = (evt) => {
@@ -282,70 +351,62 @@
                     const data = JSON.parse(evt.data);
                     handleMessage(data);
                 } catch (e) {
-                    addLog("Bad message: " + evt.data);
+                    addLog("Invalid message");
                 }
             };
 
             ws.onclose = () => {
                 $badge.className = "conn-badge disconnected";
-                $badge.textContent = "Disconnected";
-                addLog("Connection lost — reconnecting in 3s…");
+                $connText.textContent = "Disconnected";
+                addLog("Connection lost — reconnecting in 3s");
                 setTimeout(connect, 3000);
             };
 
-            ws.onerror = () => {
-                addLog("WebSocket error");
-            };
+            ws.onerror = () => addLog("WebSocket error");
         }
 
-        // ─── Handle Incoming Message ───────────────────────────────
         function handleMessage(data) {
             messageCount++;
             const status = data.status || "UNKNOWN";
-            const confidence = data.confidence || 0;
+            const confidence = data.confidence ?? 0;
             const timestamp = data.timestamp || 0;
 
-            // Update status display
             $status.textContent = status;
-            $status.className = "value status-" + status;
+            $status.className = "card-value status-" + status;
 
-            // Update confidence
             $conf.textContent = (confidence * 100).toFixed(1) + "%";
 
-            // Update timestamp
             if (timestamp > 0) {
                 const d = new Date(timestamp * 1000);
                 $ts.textContent = d.toLocaleTimeString();
             }
 
-            // Update count
-            $count.textContent = messageCount;
+            $count.textContent = String(messageCount);
 
-            // Update arrows
             $arrowL.classList.toggle("active", status === "MOVE_LEFT");
             $arrowR.classList.toggle("active", status === "MOVE_RIGHT");
             $face.classList.toggle("locked", status !== "NO_FACE");
 
-            // Log
             addLog(status + "  conf=" + confidence.toFixed(2));
         }
 
-        // ─── Log Helper ────────────────────────────────────────────
         function addLog(text) {
             const now = new Date().toLocaleTimeString();
             const entry = document.createElement("div");
-            entry.className = "entry";
-            entry.innerHTML = '<span class="ts">' + now + '</span>' + text;
+            entry.className = "log-entry";
+            entry.innerHTML = '<span class="ts">' + now + '</span>' + escapeHtml(text);
             $log.prepend(entry);
-            // Trim old entries
-            while ($log.children.length > MAX_LOG) {
-                $log.removeChild($log.lastChild);
-            }
+            while ($log.children.length > MAX_LOG) $log.removeChild($log.lastChild);
         }
 
-        // ─── Start ─────────────────────────────────────────────────
+        function escapeHtml(s) {
+            const div = document.createElement("div");
+            div.textContent = s;
+            return div.innerHTML;
+        }
+
+        document.getElementById('footerWs').textContent += ' · ' + WS_URL;
         connect();
     </script>
 </body>
-
 </html>

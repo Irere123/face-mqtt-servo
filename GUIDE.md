@@ -217,13 +217,13 @@ pip install paho-mqtt websockets
 **Terminal 1:**
 
 ```bash
-mosquitto_sub -h 127.0.0.1 -t "vision/team01/movement" -v
+mosquitto_sub -h 127.0.0.1 -t "vision/dragonfly/movement" -v
 ```
 
 **Terminal 2:**
 
 ```bash
-mosquitto_pub -h 127.0.0.1 -t "vision/team01/movement" -m '{"status":"MOVE_LEFT","confidence":0.87,"timestamp":1730000000}'
+mosquitto_pub -h 127.0.0.1 -t "vision/dragonfly/movement" -m '{"status":"MOVE_LEFT","confidence":0.87,"timestamp":1730000000}'
 ```
 
 Terminal 1 should print the message. Then close both.
@@ -253,11 +253,11 @@ nano /path/to/face-mqtt-servo/esp8266/config.py
 Set:
 
 - `WIFI_SSID` / `WIFI_PASSWORD`
-- `MQTT_BROKER` = your PC’s IP from Step 2
+- `MQTT_BROKER` = your PC’s IP from Step 2 (for local testing), or your **VPS IP** for submission / live demo
 
 Save and exit.
 
-**Note:** To use your own team ID, set `TEAM_ID` to the same value in `backend/ws_relay.py`, `pc_vision/config.py`, and `esp8266/config.py`.
+**Note:** To use your own team ID, set `TEAM_ID` to the same value in `backend/ws_relay.py`, `pc_vision/config.py`, and `esp8266/config.py`. **For submission:** when the broker runs on the VPS, set `MQTT_BROKER` (here) and `MQTT_BROKER_IP` in `pc_vision/config.py` to the VPS IP so PC and ESP8266 both connect to the same broker.
 
 ## STEP 7 — MQTT library on ESP8266
 
@@ -310,10 +310,10 @@ Unplug/replug USB or press RESET. In a terminal:
 python -m serial.tools.miniterm /dev/ttyUSB0 115200
 ```
 
-You should see WiFi and MQTT connect, and “subscribed to: vision/team01/movement”. In another terminal:
+You should see WiFi and MQTT connect, and “subscribed to: vision/dragonfly/movement”. In another terminal:
 
 ```bash
-mosquitto_pub -h 127.0.0.1 -t "vision/team01/movement" -m '{"status":"MOVE_LEFT","confidence":0.9,"timestamp":1730000000}'
+mosquitto_pub -h 127.0.0.1 -t "vision/dragonfly/movement" -m '{"status":"MOVE_LEFT","confidence":0.9,"timestamp":1730000000}'
 ```
 
 The servo should move. Exit miniterm: `Ctrl+A` then `Ctrl+X`.
@@ -402,7 +402,7 @@ face-mqtt-servo/
 |---------|-----|
 | MQTT connection refused | Start Mosquitto: `sudo systemctl start mosquitto` |
 | ESP8266 WiFi fails | Check SSID/password in `esp8266/config.py`; re-upload config (Step 6 + 8). |
-| ESP can’t reach MQTT | Set `MQTT_BROKER` in `esp8266/config.py` to PC IP (Step 2). |
+| ESP can’t reach MQTT | Set `MQTT_BROKER` in `esp8266/config.py` to PC IP (Step 2) or VPS IP for submission. |
 | Dashboard “Connecting…” | Start the WebSocket relay in Terminal 1 (`python backend/ws_relay.py`). |
 | Camera not found | In `pc_vision/config.py` set `CAMERA_INDEX` to 0 or 1. |
 | No enrolled faces | Run `python -m src.enroll` first. |

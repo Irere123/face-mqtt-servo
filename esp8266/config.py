@@ -11,7 +11,7 @@ WIFI_PASSWORD = "deserteagle"   # ← CHANGE THIS
 # ─── MQTT Broker (your PC's local IP — NOT localhost) ──────────────
 MQTT_BROKER   = "192.168.0.8"         
 MQTT_PORT     = 1883
-TEAM_ID       = "team01"
+TEAM_ID       = "dragonfly"
 MQTT_TOPIC    = "vision/{}/movement".format(TEAM_ID)
 CLIENT_ID     = "esp8266_{}".format(TEAM_ID)
 

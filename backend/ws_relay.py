@@ -23,7 +23,7 @@ import websockets
 # ─── Configuration ──────────────────────────────────────────────────
 MQTT_BROKER   = "127.0.0.1"          # localhost — Mosquitto runs on this PC
 MQTT_PORT     = 1883
-TEAM_ID       = "team01"
+TEAM_ID       = "dragonfly"
 MQTT_TOPIC    = f"vision/{TEAM_ID}/movement"
 
 WS_HOST       = "0.0.0.0"            # listen on all interfaces

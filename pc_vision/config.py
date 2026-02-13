@@ -10,7 +10,7 @@ MQTT_BROKER_PORT = 1883
 MQTT_KEEPALIVE = 60  # seconds
 
 # ─── Team Isolation ─────────────────────────────────────────────────
-TEAM_ID = "team01"
+TEAM_ID = "dragonfly"
 MQTT_TOPIC_MOVEMENT = f"vision/{TEAM_ID}/movement"
 MQTT_TOPIC_HEARTBEAT = f"vision/{TEAM_ID}/heartbeat"
 

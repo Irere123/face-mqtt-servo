@@ -2,14 +2,16 @@
 
 All commands for every component, in execution order.
 
+**Submission / live demo:** For the assignment, the broker runs on the VPS. Set **PC** and **ESP8266** to use the VPS IP as the MQTT broker: `MQTT_BROKER_IP` in `pc_vision/config.py` and `MQTT_BROKER` in `esp8266/config.py` must be your VPS IP (e.g. `157.173.101.159`), not localhost or your PC’s LAN IP.
+
 ---
 
 ## 1. VPS Setup (157.173.101.159)
 
 ```bash
 # SSH in
-ssh user323@157.173.101.159
-# Password: 12345678
+ssh user334@157.173.101.159
+# When prompted, use the password provided by your instructor.
 
 # Install Mosquitto MQTT broker
 sudo apt update && sudo apt install -y mosquitto mosquitto-clients
@@ -30,7 +32,7 @@ sudo ufw allow 9002/tcp
 pip3 install paho-mqtt websockets
 
 # Upload backend (run from your PC, not VPS)
-# scp -r backend/ user323@157.173.101.159:~/backend/
+# scp -r backend/ user334@157.173.101.159:~/backend/
 
 # Start WebSocket relay (on VPS)
 python3 ~/backend/ws_relay.py
@@ -48,22 +50,22 @@ python3 ~/backend/ws_relay.py
 
 ```bash
 # Subscribe (run on VPS or PC — shows incoming messages):
-mosquitto_sub -h 157.173.101.159 -t "vision/team01/movement" -v
+mosquitto_sub -h 157.173.101.159 -t "vision/dragonfly/movement" -v
 
 # Simulate MOVE_LEFT:
-mosquitto_pub -h 157.173.101.159 -t "vision/team01/movement" \
+mosquitto_pub -h 157.173.101.159 -t "vision/dragonfly/movement" \
   -m '{"status":"MOVE_LEFT","confidence":0.87,"timestamp":1730000000}'
 
 # Simulate MOVE_RIGHT:
-mosquitto_pub -h 157.173.101.159 -t "vision/team01/movement" \
+mosquitto_pub -h 157.173.101.159 -t "vision/dragonfly/movement" \
   -m '{"status":"MOVE_RIGHT","confidence":0.92,"timestamp":1730000001}'
 
 # Simulate CENTERED:
-mosquitto_pub -h 157.173.101.159 -t "vision/team01/movement" \
+mosquitto_pub -h 157.173.101.159 -t "vision/dragonfly/movement" \
   -m '{"status":"CENTERED","confidence":0.95,"timestamp":1730000002}'
 
 # Simulate NO_FACE:
-mosquitto_pub -h 157.173.101.159 -t "vision/team01/movement" \
+mosquitto_pub -h 157.173.101.159 -t "vision/dragonfly/movement" \
   -m '{"status":"NO_FACE","confidence":0.0,"timestamp":1730000003}'
 
 # Verify topic isolation (this should NOT receive any messages):
@@ -74,12 +76,14 @@ mosquitto_sub -h 157.173.101.159 -t "vision/otherteam/movement" -v
 
 ## 3. PC Vision Node
 
+For submission, set `MQTT_BROKER_IP` in `pc_vision/config.py` to your VPS IP (e.g. `157.173.101.159`).
+
 ```bash
 cd "Face-Locking-with-servo"
 source .venv/bin/activate
 
-# Install MQTT client (one-time)
-pip install paho-mqtt
+# Dependencies (including paho-mqtt) are in requirements.txt
+pip install -r requirements.txt
 
 # Enroll faces first (if not already done)
 python -m src.enroll
@@ -95,6 +99,8 @@ python -m pc_vision.main
 ---
 
 ## 4. ESP8266 Flashing
+
+For submission, set `MQTT_BROKER` in `esp8266/config.py` to your VPS IP (e.g. `157.173.101.159`), not your PC’s LAN IP.
 
 ```bash
 # Install tools (one-time, on PC)
