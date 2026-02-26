@@ -1,0 +1,28 @@
+13:52:11 | LOCK_ACQUIRED | sim=0.98
+13:52:13 | LOCK_LOST | Target disappeared
+13:52:18 | LOCK_ACQUIRED | sim=0.97
+13:52:20 | LOCK_LOST | Target disappeared
+13:52:24 | LOCK_ACQUIRED | sim=0.99
+13:52:25 | LOCK_LOST | Target disappeared
+13:52:28 | LOCK_ACQUIRED | sim=0.99
+13:52:29 | LOCK_LOST | Target disappeared
+13:52:29 | LOCK_ACQUIRED | sim=0.99
+13:52:36 | LOCK_LOST | Target disappeared
+13:52:37 | LOCK_ACQUIRED | sim=0.99
+13:52:56 | LOCK_LOST | Target disappeared
+13:52:56 | LOCK_ACQUIRED | sim=0.97
+13:52:58 | LOCK_LOST | Target disappeared
+13:53:23 | LOCK_ACQUIRED | sim=0.99
+13:53:24 | LOCK_LOST | Target disappeared
+13:53:25 | LOCK_ACQUIRED | sim=0.99
+13:53:26 | LOCK_LOST | Target disappeared
+13:53:27 | LOCK_ACQUIRED | sim=0.99
+13:53:28 | LOCK_LOST | Target disappeared
+13:53:28 | LOCK_ACQUIRED | sim=0.99
+13:53:30 | LOCK_LOST | Target disappeared
+13:53:30 | LOCK_ACQUIRED | sim=0.99
+13:53:31 | LOCK_LOST | Target disappeared
+13:53:31 | LOCK_ACQUIRED | sim=0.99
+13:53:32 | LOCK_LOST | Target disappeared
+13:53:33 | LOCK_ACQUIRED | sim=0.99
+13:53:34 | LOCK_LOST | Target disappeared
