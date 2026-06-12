@@ -3,10 +3,10 @@
 #include <ESP32Servo.h>
 
 // --- Configuration ---
-const char* ssid = "Main Hall";
-const char* password = "Meeting@2024";
+const char* ssid = "EdNet";
+const char* password = "Huawei@123";
 
-const char* mqtt_server = "10.12.75.96";
+const char* mqtt_server = "10.11.75.62";
 const int mqtt_port = 1883;
 const char* client_id = "esp32_dragonfly";
 const char* topic_movement = "vision/dragonfly/movement";

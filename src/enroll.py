@@ -176,22 +176,57 @@ def main():
     parser.add_argument(
         "--name", type=str, default=None, help="Identity to enroll (skips the prompt)"
     )
+    parser.add_argument(
+        "--self-test",
+        action="store_true",
+        help="Check the embedder and existing crops without opening the camera",
+    )
     args = parser.parse_args()
 
     cfg = EnrollConfig()
     ensure_dirs(cfg)
 
-    name = (args.name or input("Enter person name to enroll (e.g., Alice): ")).strip()
+    if args.self_test and args.name is None:
+        name = ""
+    else:
+        name = (
+            args.name or input("Enter person name to enroll (e.g., Alice): ")
+        ).strip()
     if not name:
-        print("No name provided. Exiting.")
-        return
+        if args.self_test:
+            name = "(none)"
+        else:
+            print("No name provided. Exiting.")
+            return
 
-    det = Haar5ptDetector(min_size=(70, 70), smooth_alpha=0.80, debug=False)
     emb = ArcFaceEmbedderONNX(
         model_path="models/embedder_arcface.onnx",
         input_size=(112, 112),
-        debug=False,
+        debug=args.self_test,
     )
+
+    if args.self_test:
+        dummy = np.zeros((112, 112, 3), dtype=np.uint8)
+        preprocessed = emb._preprocess(dummy)
+        result = emb.embed(dummy)
+        print(f"[self-test] ONNX feed shape: {preprocessed.shape}")
+        print(
+            "[self-test] dummy embedding: "
+            f"dim={result.dim} norm={np.linalg.norm(result.embedding):.6f}"
+        )
+
+        if args.name:
+            person_dir = cfg.crops_dir / name
+            crop_count = len(_list_existing_crops(person_dir, cfg.max_existing_crops))
+            samples = load_existing_samples_from_crops(cfg, emb, person_dir)
+            print(
+                f"[self-test] existing crops for '{name}': "
+                f"{crop_count} files, {len(samples)} embeddings"
+            )
+        print("[self-test] OK")
+        return
+
+    det = Haar5ptDetector(min_size=(70, 70), smooth_alpha=0.80, debug=False)
 
     db = load_db(cfg)
     person_dir = cfg.crops_dir / name

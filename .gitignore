@@ -5,6 +5,7 @@ venv/
 venv310/
 db/
 enroll/
+logs/
 node_modules/
 *.pdf
 dp.txt

@@ -183,15 +183,19 @@ class ArcFaceEmbedderONNX:
         self.in_w, self.in_h = int(input_size[0]), int(input_size[1])
         self.debug = bool(debug)
         self.sess = ort.InferenceSession(model_path, providers=["CPUExecutionProvider"])
-        self.in_name = self.sess.get_inputs()[0].name
+        self.input_meta = self.sess.get_inputs()[0]
+        self.in_name = self.input_meta.name
         self.out_name = self.sess.get_outputs()[0].name
+        self.input_layout = self._detect_input_layout(self.input_meta.shape)
         if self.debug:
             print("[embed] model:", model_path)
             print(
                 "[embed] input:",
-                self.sess.get_inputs()[0].name,
-                self.sess.get_inputs()[0].shape,
-                self.sess.get_inputs()[0].type,
+                self.input_meta.name,
+                self.input_meta.shape,
+                self.input_meta.type,
+                "layout:",
+                self.input_layout,
             )
             print(
                 "[embed] output:",
@@ -199,6 +203,19 @@ class ArcFaceEmbedderONNX:
                 self.sess.get_outputs()[0].shape,
                 self.sess.get_outputs()[0].type,
             )
+
+    @staticmethod
+    def _detect_input_layout(shape) -> str:
+        if len(shape) != 4:
+            raise ValueError(f"Expected a 4D ONNX input shape, got {shape!r}")
+        if shape[1] == 3:
+            return "NCHW"
+        if shape[3] == 3:
+            return "NHWC"
+        raise ValueError(
+            f"Cannot infer ONNX image input layout from shape {shape!r}; "
+            "expected channel dimension of 3."
+        )
 
     def _preprocess(self, aligned_bgr_112: np.ndarray) -> np.ndarray:
         img = aligned_bgr_112
@@ -208,8 +225,10 @@ class ArcFaceEmbedderONNX:
             )
         rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB).astype(np.float32)
         rgb = (rgb - 127.5) / 128.0
-        # Model expects NHWC: (1, H, W, 3)
-        x = rgb[None, ...]
+        if self.input_layout == "NCHW":
+            x = np.transpose(rgb, (2, 0, 1))[None, ...]
+        else:
+            x = rgb[None, ...]
         return x.astype(np.float32)
 
     @staticmethod
