@@ -43,12 +43,14 @@ TOPIC_SNAPSHOT = f"vision/{TEAM_ID}/snapshot"
 
 
 class VisionNode:
-    def __init__(self, broker, port, target_name, dist_thresh=0.60):
+    def __init__(self, broker, port, target_name, dist_thresh=0.60, camera_index=None):
         if mqtt is None:
             raise RuntimeError(
                 f"paho-mqtt import failed: {_MQTT_IMPORT_ERROR}\n"
                 "Install dependencies with: pip install -r requirements.txt"
             )
+        self.camera_index = camera_index
+
         # MQTT Setup (paho-mqtt 2.x callback API)
         self.client = mqtt.Client(
             mqtt.CallbackAPIVersion.VERSION2,
@@ -139,7 +141,7 @@ class VisionNode:
 
     def run(self):
         # Try multiple indices so it works across different machines
-        cap = open_camera()
+        cap = open_camera(preferred=self.camera_index)
         
         print(f"Vision Node Started. Tracking target: {self.system.target_name}")
         print(f"Publishing to {TOPIC_MOVEMENT}")
@@ -236,7 +238,19 @@ if __name__ == "__main__":
         "--thresh", type=float, default=0.60,
         help="Cosine DISTANCE threshold (lower = stricter). Tune with: python -m src.evaluate",
     )
+    parser.add_argument(
+        "--camera",
+        type=int,
+        default=None,
+        help="Preferred OpenCV camera index, e.g. 1 for an external USB camera",
+    )
     args = parser.parse_args()
 
-    node = VisionNode(args.broker, PORT, args.name, dist_thresh=args.thresh)
+    node = VisionNode(
+        args.broker,
+        PORT,
+        args.name,
+        dist_thresh=args.thresh,
+        camera_index=args.camera,
+    )
     node.run()

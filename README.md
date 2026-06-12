@@ -78,6 +78,19 @@ python -m src.enroll --name irere
 ```
 Capture 10–30 samples (SPACE or `a` for auto-capture), then press `s` to save.
 
+### 2.5. Select the Camera
+If you have both a laptop webcam and a camera mounted on the servo, test each
+OpenCV camera index and use the one that shows the servo-mounted camera:
+
+```bash
+python -m src.camera --index 0
+python -m src.camera --index 1
+python -m src.camera --index 2
+```
+
+Press `q` to close each preview window. The terminal prints the selected index:
+`[camera] using camera index X`.
+
 ### 3. Start the System
 
 **Terminal 1 (MQTT broker — local or VPS):**
@@ -96,7 +109,9 @@ npm start                                # broker on localhost
 ```bash
 python src/vision_node.py --name irere               # broker on localhost
 python src/vision_node.py --broker <broker-ip> --name irere
+python src/vision_node.py --broker <broker-ip> --name irere --camera 1
 # optional: --thresh 0.50  (stricter match; tune with: python -m src.evaluate)
+# optional: --camera 1     (preferred OpenCV camera index)
 ```
 
 ### 4. Flash ESP32
@@ -118,6 +133,10 @@ Upload `esp32/vision_servo/vision_servo.ino` using Arduino IDE:
 > (470uF+) across the servo's power pins.
 
 (A MicroPython alternative lives in `esp32/boot.py` + `esp32/main.py` — set WiFi in `boot.py` and the broker IP in `main.py`. Legacy ESP8266 firmware remains in `esp8266/`.)
+
+The servo-mounted camera should still be connected to the PC as a USB camera.
+The ESP32 controls the servo over MQTT; the PC vision node reads the camera and
+publishes `MOVE_LEFT`, `MOVE_RIGHT`, `CENTERED`, or `NO_FACE` commands.
 
 ### 5. Access Dashboard
 Open: `http://<backend-host>:8080` (e.g. http://localhost:8080)

@@ -7,6 +7,7 @@ read (on macOS a capture can report isOpened() yet deliver no frames).
 Run this module directly for a quick camera test:
 python -m src.camera
 """
+import argparse
 from typing import Optional, Sequence
 
 import cv2
@@ -43,7 +44,16 @@ def open_camera(
 
 
 def main():
-    cap = open_camera()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--index",
+        type=int,
+        default=None,
+        help="Preferred camera index to try first, e.g. 1 for an external USB camera",
+    )
+    args = parser.parse_args()
+
+    cap = open_camera(preferred=args.index)
 
     print("Camera test. Press 'q' to quit.")
 
