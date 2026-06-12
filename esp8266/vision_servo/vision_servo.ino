@@ -3,14 +3,15 @@
 #include <Servo.h>
 
 // --- Configuration ---
-const char* ssid = "Main Hall";
-const char* password = "Meeting@2024";
+const char* ssid = "EdNet";
+const char* password = "Huawei@123";
 
-const char* mqtt_server = "10.12.75.96"; 
+const char* mqtt_server = "10.11.75.62";
 const int mqtt_port = 1883;
 const char* client_id = "esp8266_dragonfly";
 const char* topic_movement = "vision/dragonfly/movement";
 const char* topic_heartbeat = "vision/dragonfly/heartbeat";
+String mqttClientId;
 
 // Servo Configuration
 Servo myServo;
@@ -35,6 +36,7 @@ const unsigned long FACE_TIMEOUT = 2000; // 2 seconds without a face triggers a 
 
 WiFiClient espClient;
 PubSubClient client(espClient);
+unsigned long lastMqttReconnectAttempt = 0;
 
 void setup_wifi() {
   delay(10);
@@ -60,6 +62,11 @@ void callback(char* topic, byte* payload, unsigned int length) {
   for (int i = 0; i < length; i++) {
     message += (char)payload[i];
   }
+
+  Serial.print("MQTT message on ");
+  Serial.print(topic);
+  Serial.print(": ");
+  Serial.println(message);
   
   // Parse the commands and update the Watchdog Timer
   if (message.indexOf("MOVE_LEFT") >= 0) {
@@ -81,23 +88,29 @@ void callback(char* topic, byte* payload, unsigned int length) {
   }
 }
 
-void reconnect() {
-  while (!client.connected()) {
-    Serial.print("Attempting MQTT connection...");
-    if (client.connect(client_id)) {
-      Serial.println("Connected!");
-      client.subscribe(topic_movement); 
-    } else {
-      Serial.print("failed, rc=");
-      Serial.print(client.state());
-      Serial.println(" trying again in 5s");
-      delay(5000);
-    }
+bool reconnect() {
+  unsigned long now = millis();
+  if (now - lastMqttReconnectAttempt < 5000) {
+    return false;
   }
+
+  lastMqttReconnectAttempt = now;
+  Serial.print("Attempting MQTT connection...");
+  if (client.connect(mqttClientId.c_str())) {
+    Serial.println("Connected!");
+    client.subscribe(topic_movement);
+    client.publish(topic_heartbeat, "{\"node\": \"esp8266\", \"status\": \"ONLINE\"}");
+    return true;
+  }
+
+  Serial.print("failed, rc=");
+  Serial.println(client.state());
+  return false;
 }
 
 void setup() {
   Serial.begin(115200);
+  mqttClientId = String(client_id) + "_" + String(ESP.getChipId(), HEX);
   myServo.attach(servoPin);
   myServo.write(currentAngle); 
 
@@ -109,8 +122,9 @@ void setup() {
 void loop() {
   if (!client.connected()) {
     reconnect();
+  } else {
+    client.loop();
   }
-  client.loop();
 
   unsigned long now = millis();
 

@@ -11,6 +11,7 @@ const int mqtt_port = 1883;
 const char* client_id = "esp32_dragonfly";
 const char* topic_movement = "vision/dragonfly/movement";
 const char* topic_heartbeat = "vision/dragonfly/heartbeat";
+String mqttClientId;
 
 // Servo Configuration
 Servo myServo;
@@ -37,6 +38,7 @@ const unsigned long FACE_TIMEOUT = 2000; // 2 seconds without a face triggers a 
 
 WiFiClient espClient;
 PubSubClient client(espClient);
+unsigned long lastMqttReconnectAttempt = 0;
 
 void setup_wifi() {
   delay(10);
@@ -65,6 +67,11 @@ void callback(char* topic, byte* payload, unsigned int length) {
     message += (char)payload[i];
   }
 
+  Serial.print("MQTT message on ");
+  Serial.print(topic);
+  Serial.print(": ");
+  Serial.println(message);
+
   // Parse the commands and update the Watchdog Timer
   if (message.indexOf("MOVE_LEFT") >= 0) {
     isSearching = false;
@@ -85,23 +92,29 @@ void callback(char* topic, byte* payload, unsigned int length) {
   }
 }
 
-void reconnect() {
-  while (!client.connected()) {
-    Serial.print("Attempting MQTT connection...");
-    if (client.connect(client_id)) {
-      Serial.println("Connected!");
-      client.subscribe(topic_movement);
-    } else {
-      Serial.print("failed, rc=");
-      Serial.print(client.state());
-      Serial.println(" trying again in 5s");
-      delay(5000);
-    }
+bool reconnect() {
+  unsigned long now = millis();
+  if (now - lastMqttReconnectAttempt < 5000) {
+    return false;
   }
+
+  lastMqttReconnectAttempt = now;
+  Serial.print("Attempting MQTT connection...");
+  if (client.connect(mqttClientId.c_str())) {
+    Serial.println("Connected!");
+    client.subscribe(topic_movement);
+    client.publish(topic_heartbeat, "{\"node\": \"esp32\", \"status\": \"ONLINE\"}");
+    return true;
+  }
+
+  Serial.print("failed, rc=");
+  Serial.println(client.state());
+  return false;
 }
 
 void setup() {
   Serial.begin(115200);
+  mqttClientId = String(client_id) + "_" + String((uint32_t)ESP.getEfuseMac(), HEX);
 
   // ESP32Servo needs its PWM timers allocated before attach()
   ESP32PWM::allocateTimer(0);
@@ -120,8 +133,9 @@ void setup() {
 void loop() {
   if (!client.connected()) {
     reconnect();
+  } else {
+    client.loop();
   }
-  client.loop();
 
   unsigned long now = millis();
 
