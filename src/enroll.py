@@ -29,6 +29,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 import cv2
 import numpy as np
+from .camera import open_camera
 from .haar_5pt import Haar5ptDetector, align_face_5pt
 from .embed import ArcFaceEmbedderONNX
 
@@ -79,19 +80,6 @@ def mean_embedding(embeddings: List[np.ndarray]) -> np.ndarray:
     m = E.mean(axis=0)
     m = m / (np.linalg.norm(m) + 1e-12)
     return m.astype(np.float32)
-
-
-def _open_any_camera(indices: List[int] = [0, 1, 2, 3]) -> cv2.VideoCapture:
-    """
-    Try a list of camera indices and return the first opened capture.
-    Raises RuntimeError if none can be opened.
-    """
-    for idx in indices:
-        cap = cv2.VideoCapture(idx)
-        if cap.isOpened():
-            return cap
-        cap.release()
-    raise RuntimeError(f"Failed to open camera. Tried indices: {indices}")
 
 
 # -------------------------
@@ -214,7 +202,7 @@ def main():
     last_auto = 0.0
 
     # Try several camera indices so it works across different machines
-    cap = _open_any_camera()
+    cap = open_camera()
 
     cv2.namedWindow(cfg.window_main, cv2.WINDOW_NORMAL)
     cv2.namedWindow(cfg.window_aligned, cv2.WINDOW_NORMAL)

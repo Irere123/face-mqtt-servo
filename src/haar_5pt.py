@@ -451,7 +451,13 @@ class Haar5ptDetector:
 # Demo
 # -------------------------
 def main():
-    cap = cv2.VideoCapture(1)
+    try:
+        from .camera import open_camera
+    except ImportError:
+        # Run directly: python src/haar_5pt.py
+        from camera import open_camera
+
+    cap = open_camera()
 
     det = Haar5ptDetector(
         min_size=(70, 70),

@@ -18,12 +18,13 @@ from __future__ import annotations
 import os
 import time
 from pathlib import Path
-from typing import Tuple
+from typing import Optional, Tuple
 
 import cv2
 import numpy as np
 
 # Import from your existing script
+from .camera import open_camera
 from .haar_5pt import Haar5ptDetector, align_face_5pt
 
 
@@ -47,11 +48,11 @@ def _safe_imshow(win: str, img: np.ndarray):
 
 
 def main(
-    cam_index: int = 1,
+    cam_index: Optional[int] = None,
     out_size: Tuple[int, int] = (112, 112),
     mirror: bool = True,
 ):
-    cap = cv2.VideoCapture(cam_index)
+    cap = open_camera(preferred=cam_index)
 
     det = Haar5ptDetector(
         min_size=(70, 70),

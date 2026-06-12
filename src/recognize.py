@@ -40,6 +40,7 @@ except Exception as e:
     mp = None
     _MP_IMPORT_ERROR = e
 
+from .camera import open_camera
 from .haar_5pt import align_face_5pt
 
 
@@ -406,9 +407,7 @@ def main():
     )
     db = load_db_npz(db_path)
     matcher = FaceDBMatcher(db=db, dist_thresh=0.62)
-    cap = cv2.VideoCapture(1)
-    if not cap.isOpened():
-        raise RuntimeError("Camera not available")
+    cap = open_camera()
     print("Recognize (multi-face). q=quit, r=reload DB, +/- threshold, d=debug overlay")
     t0 = time.time()
     frames = 0

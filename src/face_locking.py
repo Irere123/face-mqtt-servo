@@ -14,12 +14,14 @@ import mediapipe as mp
 # Import existing modules
 # We need to ensure we can import from . if run as a module or direct
 try:
+    from .camera import open_camera
     from .haar_5pt import Haar5ptDetector, align_face_5pt, _bbox_from_5pt, _clip_box_xyxy
     from .recognize import ArcFaceEmbedderONNX, FaceDBMatcher, load_db_npz
 except ImportError:
     # If run directly: python src/face_locking.py
     import sys
     sys.path.append(str(Path(__file__).parent.parent))
+    from src.camera import open_camera
     from src.haar_5pt import Haar5ptDetector, align_face_5pt, _bbox_from_5pt, _clip_box_xyxy
     from src.recognize import ArcFaceEmbedderONNX, FaceDBMatcher, load_db_npz
 
@@ -322,7 +324,7 @@ def main():
     
     system = FaceLockSystem(args.name, matcher, det)
     
-    cap = cv2.VideoCapture(1)
+    cap = open_camera()
     print("Mask Locking System Started. Press 'q' to quit.")
     
     while True:

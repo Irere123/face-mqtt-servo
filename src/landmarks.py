@@ -12,6 +12,12 @@ import cv2
 import numpy as np
 
 try:
+    from .camera import open_camera
+except ImportError:
+    # Run directly: python src/landmarks.py
+    from camera import open_camera
+
+try:
     import mediapipe as mp
     try:
         from mediapipe import solutions as mp_solutions  # type: ignore[attr-defined]
@@ -70,9 +76,7 @@ def main():
         if "_MP_IMPORT_ERROR" in globals():
             print(f"[landmarks] mediapipe import detail: {_MP_IMPORT_ERROR}")
 
-    cap = cv2.VideoCapture(1)
-    if not cap.isOpened():
-        raise RuntimeError("Camera not opened. Try camera index 0/1/2.")
+    cap = open_camera()
 
     print("Haar + FaceMesh 5pt (minimal). Press 'q' to quit.")
 

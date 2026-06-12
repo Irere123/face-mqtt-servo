@@ -1,6 +1,12 @@
 # src/detect.py
 import cv2
 
+try:
+    from .camera import open_camera
+except ImportError:
+    # Run directly: python src/detect.py
+    from camera import open_camera
+
 
 def main():
     cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
@@ -9,9 +15,7 @@ def main():
     if face.empty():
         raise RuntimeError(f"Failed to load cascade: {cascade_path}")
 
-    cap = cv2.VideoCapture(1)
-    if not cap.isOpened():
-        raise RuntimeError("Camera not opened. Try camera index 0/1/2.")
+    cap = open_camera()
 
     print("Haar face detect (minimal). Press 'q' to quit.")
 
