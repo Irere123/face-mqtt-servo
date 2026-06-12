@@ -47,6 +47,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--index",
+        "--camera",
+        dest="index",
         type=int,
         default=None,
         help="Preferred camera index to try first, e.g. 1 for an external USB camera",

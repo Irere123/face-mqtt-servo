@@ -15,6 +15,7 @@ s save current aligned face to data/debug_aligned/<timestamp>.jpg
 
 from __future__ import annotations
 
+import argparse
 import os
 import time
 from pathlib import Path
@@ -147,4 +148,12 @@ def main(
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--camera",
+        type=int,
+        default=None,
+        help="Preferred OpenCV camera index, e.g. 1 for an external USB camera",
+    )
+    args = parser.parse_args()
+    main(cam_index=args.camera)

@@ -181,6 +181,12 @@ def main():
         action="store_true",
         help="Check the embedder and existing crops without opening the camera",
     )
+    parser.add_argument(
+        "--camera",
+        type=int,
+        default=None,
+        help="Preferred OpenCV camera index, e.g. 1 for an external USB camera",
+    )
     args = parser.parse_args()
 
     cfg = EnrollConfig()
@@ -246,7 +252,7 @@ def main():
     last_auto = 0.0
 
     # Try several camera indices so it works across different machines
-    cap = open_camera()
+    cap = open_camera(preferred=args.camera)
 
     cv2.namedWindow(cfg.window_main, cv2.WINDOW_NORMAL)
     cv2.namedWindow(cfg.window_aligned, cv2.WINDOW_NORMAL)

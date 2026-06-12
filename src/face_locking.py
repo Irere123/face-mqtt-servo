@@ -320,6 +320,12 @@ class FaceLockSystem:
 def main():
     cfg = argparse.ArgumentParser()
     cfg.add_argument("--name", type=str, default="irere", help="Target identity to lock onto")
+    cfg.add_argument(
+        "--camera",
+        type=int,
+        default=None,
+        help="Preferred OpenCV camera index, e.g. 1 for an external USB camera",
+    )
     args = cfg.parse_args()
     
     # Init
@@ -341,7 +347,7 @@ def main():
     
     system = FaceLockSystem(args.name, matcher, det)
     
-    cap = open_camera()
+    cap = open_camera(preferred=args.camera)
     print("Face Locking System Started. Press 'q' to quit.")
 
     while True:

@@ -13,6 +13,7 @@ python -m src.haar_5pt
 
 from __future__ import annotations
 
+import argparse
 from dataclasses import dataclass
 from typing import Optional, Tuple, List
 
@@ -451,13 +452,22 @@ class Haar5ptDetector:
 # Demo
 # -------------------------
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--camera",
+        type=int,
+        default=None,
+        help="Preferred OpenCV camera index, e.g. 1 for an external USB camera",
+    )
+    args = parser.parse_args()
+
     try:
         from .camera import open_camera
     except ImportError:
         # Run directly: python src/haar_5pt.py
         from camera import open_camera
 
-    cap = open_camera()
+    cap = open_camera(preferred=args.camera)
 
     det = Haar5ptDetector(
         min_size=(70, 70),

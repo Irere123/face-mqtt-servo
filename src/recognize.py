@@ -19,6 +19,7 @@ Since embeddings are L2-normalized, cosine_similarity = dot(a,b).
 """
 
 from __future__ import annotations
+import argparse
 import time
 import json
 from dataclasses import dataclass
@@ -414,6 +415,15 @@ class FaceDBMatcher:
 # Demo
 # -------------------------
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--camera",
+        type=int,
+        default=None,
+        help="Preferred OpenCV camera index, e.g. 1 for an external USB camera",
+    )
+    args = parser.parse_args()
+
     db_path = Path("data/db/face_db.npz")
     det = HaarFaceMesh5pt(
         min_size=(70, 70),
@@ -426,7 +436,7 @@ def main():
     )
     db = load_db_npz(db_path)
     matcher = FaceDBMatcher(db=db, dist_thresh=0.62)
-    cap = open_camera()
+    cap = open_camera(preferred=args.camera)
     print("Recognize (multi-face). q=quit, r=reload DB, +/- threshold, d=debug overlay")
     t0 = time.time()
     frames = 0

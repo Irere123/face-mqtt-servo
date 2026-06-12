@@ -14,6 +14,7 @@ p : print embedding stats to terminal
 """
 
 from __future__ import annotations
+import argparse
 from dataclasses import dataclass
 from typing import Tuple, Optional
 import time
@@ -169,8 +170,8 @@ def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
 # -------------------------
 # Demo
 # -------------------------
-def main():
-    cap = open_camera()
+def main(camera_index=None):
+    cap = open_camera(preferred=camera_index)
     det = Haar5ptDetector(
         min_size=(70, 70),
         smooth_alpha=0.80,
@@ -271,4 +272,12 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--camera",
+        type=int,
+        default=None,
+        help="Preferred OpenCV camera index, e.g. 1 for an external USB camera",
+    )
+    args = parser.parse_args()
+    main(camera_index=args.camera)

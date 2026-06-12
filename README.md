@@ -75,6 +75,7 @@ cd backend && npm install
 ### 2. Enroll Your Face
 ```bash
 python -m src.enroll --name irere
+python -m src.enroll --name irere --camera 1
 ```
 Capture 10–30 samples (SPACE or `a` for auto-capture), then press `s` to save.
 
@@ -83,13 +84,17 @@ If you have both a laptop webcam and a camera mounted on the servo, test each
 OpenCV camera index and use the one that shows the servo-mounted camera:
 
 ```bash
-python -m src.camera --index 0
-python -m src.camera --index 1
-python -m src.camera --index 2
+python -m src.camera --camera 0
+python -m src.camera --camera 1
+python -m src.camera --camera 2
 ```
 
 Press `q` to close each preview window. The terminal prints the selected index:
 `[camera] using camera index X`.
+
+All scripts that open a live camera accept the same `--camera <index>` option:
+`src.enroll`, `src.vision_node`, `src.face_locking`, `src.recognize`,
+`src.embed`, `src.align`, `src.detect`, `src.landmarks`, and `src.haar_5pt`.
 
 ### 3. Start the System
 

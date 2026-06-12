@@ -8,6 +8,8 @@ Keys:
 q : quit
 """
 
+import argparse
+
 import cv2
 import numpy as np
 
@@ -55,6 +57,15 @@ def _approx_5pt_from_haar_box(x: int, y: int, w: int, h: int) -> np.ndarray:
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--camera",
+        type=int,
+        default=None,
+        help="Preferred OpenCV camera index, e.g. 1 for an external USB camera",
+    )
+    args = parser.parse_args()
+
     # Haar
     cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
     face = cv2.CascadeClassifier(cascade_path)
@@ -76,7 +87,7 @@ def main():
         if "_MP_IMPORT_ERROR" in globals():
             print(f"[landmarks] mediapipe import detail: {_MP_IMPORT_ERROR}")
 
-    cap = open_camera()
+    cap = open_camera(preferred=args.camera)
 
     print("Haar + FaceMesh 5pt (minimal). Press 'q' to quit.")
 

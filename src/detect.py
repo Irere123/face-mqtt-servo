@@ -1,4 +1,6 @@
 # src/detect.py
+import argparse
+
 import cv2
 
 try:
@@ -8,14 +10,14 @@ except ImportError:
     from camera import open_camera
 
 
-def main():
+def main(camera_index=None):
     cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
     face = cv2.CascadeClassifier(cascade_path)
 
     if face.empty():
         raise RuntimeError(f"Failed to load cascade: {cascade_path}")
 
-    cap = open_camera()
+    cap = open_camera(preferred=camera_index)
 
     print("Haar face detect (minimal). Press 'q' to quit.")
 
@@ -53,4 +55,12 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--camera",
+        type=int,
+        default=None,
+        help="Preferred OpenCV camera index, e.g. 1 for an external USB camera",
+    )
+    args = parser.parse_args()
+    main(camera_index=args.camera)
