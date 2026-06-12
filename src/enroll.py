@@ -22,6 +22,7 @@ Controls:
 """
 
 from __future__ import annotations
+import argparse
 import json
 import time
 from dataclasses import dataclass
@@ -111,8 +112,10 @@ def load_existing_samples_from_crops(
         if img is None:
             continue
         try:
-            r = emb.embed(img)
-            base.append(r.embedding)
+            base.append(emb.embed(img).embedding)
+            # Also embed the mirrored crop: the live pipeline (vision_node)
+            # flips frames, so the template must be robust to mirroring.
+            base.append(emb.embed(cv2.flip(img, 1)).embedding)
         except Exception:
             continue
     return base
@@ -169,10 +172,16 @@ def draw_status(
 # Main
 # -------------------------
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--name", type=str, default=None, help="Identity to enroll (skips the prompt)"
+    )
+    args = parser.parse_args()
+
     cfg = EnrollConfig()
     ensure_dirs(cfg)
 
-    name = input("Enter person name to enroll (e.g., Alice): ").strip()
+    name = (args.name or input("Enter person name to enroll (e.g., Alice): ")).strip()
     if not name:
         print("No name provided. Exiting.")
         return
@@ -247,8 +256,8 @@ def main():
                 and aligned is not None
                 and (now - last_auto) >= cfg.auto_capture_every_s
             ):
-                r = emb.embed(aligned)
-                new_samples.append(r.embedding)
+                new_samples.append(emb.embed(aligned).embedding)
+                new_samples.append(emb.embed(cv2.flip(aligned, 1)).embedding)
                 last_auto = now
                 status_msg = f"Auto captured NEW ({len(new_samples)})"
                 if cfg.save_crops:
@@ -299,8 +308,8 @@ def main():
                 if aligned is None:
                     status_msg = "No face detected. Not captured."
                 else:
-                    r = emb.embed(aligned)
-                    new_samples.append(r.embedding)
+                    new_samples.append(emb.embed(aligned).embedding)
+                    new_samples.append(emb.embed(cv2.flip(aligned, 1)).embedding)
                     status_msg = f"Captured NEW ({len(new_samples)})"
                     if cfg.save_crops:
                         fn = person_dir / f"{int(time.time() * 1000)}.jpg"

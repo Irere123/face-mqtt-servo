@@ -5,11 +5,12 @@ const fs = require('fs');
 const path = require('path');
 
 // Configuration
-// On VPS, we connect to local mosquitto. On PC, we might want to connect to VPS IP?
-// For Backend (running on VPS), it should connect to localhost (its own mosquitto).
-const MQTT_BROKER = 'mqtt://10.12.75.96';
+// Override with: MQTT_BROKER=mqtt://<broker-ip> npm start
+const MQTT_BROKER = process.env.MQTT_BROKER || 'mqtt://localhost';
 const TEAM_ID = 'dragonfly';
 const MQTT_TOPIC_VS = `vision/${TEAM_ID}/movement`;
+const MQTT_TOPIC_SNAP = `vision/${TEAM_ID}/snapshot`;   // face snapshot (base64 JPEG)
+const MQTT_TOPIC_HB = `vision/${TEAM_ID}/heartbeat`;    // PC + ESP8266 heartbeats
 const WS_PORT = 9002;
 const HTTP_PORT = 8080; // Port for Dashboard HTML
 
@@ -19,9 +20,9 @@ const mqttClient = mqtt.connect(MQTT_BROKER);
 
 mqttClient.on('connect', () => {
     console.log(`Connected to MQTT Broker.`);
-    mqttClient.subscribe(MQTT_TOPIC_VS, (err) => {
+    mqttClient.subscribe([MQTT_TOPIC_VS, MQTT_TOPIC_SNAP, MQTT_TOPIC_HB], (err) => {
         if (!err) {
-            console.log(`Subscribed to topic: ${MQTT_TOPIC_VS}`);
+            console.log(`Subscribed to: ${MQTT_TOPIC_VS}, ${MQTT_TOPIC_SNAP}, ${MQTT_TOPIC_HB}`);
         } else {
             console.error('MQTT Subscription Error:', err);
         }
@@ -30,7 +31,11 @@ mqttClient.on('connect', () => {
 
 mqttClient.on('message', (topic, message) => {
     const msgString = message.toString();
-    console.log(`MQTT IN [${topic}]: ${msgString}`);
+    // Snapshot payloads embed a base64 JPEG -- don't dump them to the console
+    const preview = msgString.length > 200
+        ? `${msgString.slice(0, 200)}... (${msgString.length} bytes)`
+        : msgString;
+    console.log(`MQTT IN [${topic}]: ${preview}`);
 
     // Broadcast to all WS clients
     broadcast(msgString);

@@ -228,8 +228,9 @@
     </div>
 
     <script>
-        // Connect to Backend running on PC
-        const wsUrl = `ws://10.12.75.96:9002`;
+        // Connect to the backend that served this page (falls back to
+        // localhost when the file is opened directly from disk)
+        const wsUrl = `ws://${location.hostname || 'localhost'}:9002`;
         let ws;
 
         const statusEl = document.getElementById('movement-status');
@@ -263,6 +264,14 @@
                     // Handle STATUS messages
                     if (data.type === 'STATUS') {
                         addLog(data.message);
+                        return;
+                    }
+
+                    // Heartbeats ({node, status}) from the PC / ESP8266 --
+                    // must be checked before the movement branch because
+                    // they also carry a "status" field.
+                    if (data.node) {
+                        addLog(`Heartbeat: ${data.node} is ${data.status}`);
                         return;
                     }
 
@@ -329,7 +338,9 @@
             void statusEl.parentElement.offsetWidth; // Trigger reflow
             statusEl.parentElement.classList.add('active-update');
 
-            if (data.confidence) confEl.textContent = `Confidence: ${(data.confidence * 100).toFixed(1)}%`;
+            if (data.confidence !== undefined && data.confidence !== null) {
+                confEl.textContent = `Confidence: ${(data.confidence * 100).toFixed(1)}%`;
+            }
 
             const date = new Date();
             timeEl.textContent = date.toLocaleTimeString();

@@ -477,7 +477,8 @@ def main():
                 y0 += thumb + pad
                 shown += 1
 
-        if show_debug:
+        if show_debug and faces:
+            f = faces[-1]
             dbg = f"kpsLeye=({f.kps[0,0]:.0f},{f.kps[0,1]:.0f})"
             cv2.putText(
                 vis,

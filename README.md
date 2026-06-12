@@ -73,30 +73,36 @@ cd backend && npm install
 ```bash
 python -m src.enroll --name irere
 ```
+Capture 10–30 samples (SPACE or `a` for auto-capture), then press `s` to save.
 
 ### 3. Start the System
 
-**On VPS (or local MQTT broker):**
+**Terminal 1 (MQTT broker — local or VPS):**
 ```bash
 mosquitto -c mosquitto.conf
 ```
 
-**On PC - Terminal 1 (Backend):**
+**Terminal 2 (Backend / dashboard relay):**
 ```bash
 cd backend
-npm start
+npm start                                # broker on localhost
+# MQTT_BROKER=mqtt://<broker-ip> npm start  # broker elsewhere
 ```
 
-**On PC - Terminal 2 (Vision Node):**
+**Terminal 3 (Vision Node):**
 ```bash
-python src/vision_node.py --broker 157.173.101.159 --name irere
+python src/vision_node.py --name irere               # broker on localhost
+python src/vision_node.py --broker <broker-ip> --name irere
+# optional: --thresh 0.50  (stricter match; tune with: python -m src.evaluate)
 ```
 
 ### 4. Flash ESP8266
 Upload `esp8266/vision_servo/vision_servo.ino` using Arduino IDE.
+**Before flashing, edit the WiFi `ssid`/`password` and `mqtt_server` IP at the top of the sketch.**
+(A MicroPython alternative lives in `esp8266/boot.py` + `esp8266/main.py` — set WiFi in `boot.py` and the broker IP in `main.py`.)
 
 ### 5. Access Dashboard
-Open: [http://157.173.101.159:9313]([http://157.173.101.159:9313/])
+Open: `http://<backend-host>:8080` (e.g. http://localhost:8080)
 
 ## Assessment Details (Week 06)
 
@@ -108,11 +114,48 @@ This project implements a **Distributed Face Recognition and Locking System** us
 4.  **Web Dashboard**: Visualizes the real-time blocking status and tracking info.
 
 ### MQTT Topics
--   `vision/team313/movement`: JSON payload with `status` (MOVE_LEFT, MOVE_RIGHT, CENTERED), `target`, and `locked` state.
--   `vision/team313/heartbeat`: System health status.
+-   `vision/dragonfly/movement`: small JSON payload with `status` (MOVE_LEFT, MOVE_RIGHT, CENTERED, NO_FACE), `confidence`, `target`, `locked`, `timestamp`. Published at 10 Hz; consumed by the ESP8266 and dashboard.
+-   `vision/dragonfly/snapshot`: same payload plus a base64 face crop (`face_image`). Kept separate so the large image never hits the ESP8266's 256-byte MQTT buffer.
+-   `vision/dragonfly/heartbeat`: health pings from the PC vision node and the ESP8266.
+
+### Command Mapping (assessment terminology)
+| Assessment command | Published `status` | ESP8266 behavior |
+|---|---|---|
+| LEFT | `MOVE_LEFT` | step servo (angle −3°) |
+| RIGHT | `MOVE_RIGHT` | step servo (angle +3°) |
+| STOP / CENTERED | `CENTERED` | hold position |
+| SCAN / OUT_OF_FRAME | `NO_FACE` | sweep back and forth until the speaker is re-acquired |
+
+### Recognize → Track → Command Pipeline (Activity 3 flowchart)
+
+```mermaid
+flowchart TD
+    A[Camera frame] --> B[Haar + FaceMesh<br>detect all faces]
+    B --> C[Align each face 5pt -> 112x112]
+    C --> D[ArcFace ONNX embedding]
+    D --> E{Cosine distance to<br>enrolled template<br>&le; threshold?}
+    E -- "no (unknown / other person)" --> F[Ignore face]
+    E -- "yes, name == target" --> G[Speaker LOCK<br>best-similarity face]
+    G --> H[Compute horizontal error:<br>face center x vs frame center]
+    H --> I{Deadband<br>0.4 &le; cx &le; 0.6?}
+    I -- "cx < 0.4" --> J[status = MOVE_LEFT]
+    I -- "yes" --> K[status = CENTERED]
+    I -- "cx > 0.6" --> L[status = MOVE_RIGHT]
+    G -. "target lost > 10 frames" .-> M[status = NO_FACE<br>SEARCH mode]
+    J & K & L & M --> N[Publish JSON via MQTT @10Hz<br>vision/dragonfly/movement]
+    N --> O[ESP8266 subscriber]
+    O --> P[Servo PWM step / hold / sweep]
+    N --> Q[CSV evidence log<br>data/logs/commands_*.csv]
+```
+
+### Evidence Logging (Activity 5)
+Every published command is appended to `data/logs/commands_<session>.csv`:
+`timestamp, iso_time, speaker, confidence, command, locked`.
+Facial action history (blinks, smiles, lock acquired/lost) is written to
+`data/logs/<name>_history_<session>.txt`.
 
 ### Live Dashboard
-**URL**: [http://157.173.101.159:9313/]
+**URL**: `http://<backend-host>:8080`
 
 ## Face Locking
 The new Face Locking feature (`src/face_locking.py` and `vision_node.py`) allows you to track a single enrolled identity continuously.
@@ -126,4 +169,4 @@ The new Face Locking feature (`src/face_locking.py` and `vision_node.py`) allows
     - **Movement**: Using nose position (Left/Right).
 
 **History**:
-A file named `<name>_history_<timestamp>.txt` is created to record all detected actions.
+A file named `data/logs/<name>_history_<timestamp>.txt` is created to record all detected actions, alongside the per-session command log `data/logs/commands_<timestamp>.csv`.

@@ -108,7 +108,7 @@ class FaceActionDetector:
         # 3. Head Movement (Left/Right)
         # Check nose x relative to frame center (0.5 in normalized coords)
         nose = coords[self.P_NOSE_TIP]
-        if nose[0] < 0.50:
+        if nose[0] < 0.40:
              actions.append(("MOVE_LEFT", f"nose_x={nose[0]:.2f}"))
         elif nose[0] > 0.60:
              actions.append(("MOVE_RIGHT", f"nose_x={nose[0]:.2f}"))
@@ -136,11 +136,15 @@ class FaceLockSystem:
         self.locked_frames = 0
         self.lost_frames = 0
         self.MAX_LOST_FRAMES = 10  # Tolerance before unlocking
-        
+        # Similarity of the target in the most recent frame (0.0 when not visible)
+        self.last_similarity = 0.0
+
         # We need to store the session file name
         ts = time.strftime("%Y%m%d%H%M%S")
         safe_name = "".join(c for c in target_name if c.isalnum())
-        self.history_file = Path(f"{safe_name}_history_{ts}.txt")
+        log_dir = Path("data/logs")
+        log_dir.mkdir(parents=True, exist_ok=True)
+        self.history_file = log_dir / f"{safe_name}_history_{ts}.txt"
         
         print(f"[FaceLock] Initialized. Target: {target_name}. Log: {self.history_file}")
 
@@ -203,8 +207,11 @@ class FaceLockSystem:
                         2
                     )
 
+        # Expose real confidence so callers (vision_node) can publish/log it
+        self.last_similarity = target_sim if target_face is not None else 0.0
+
         # 2. State Machine Logic for Target
-        
+
         # Handle state transitions based on whether target was found this frame
         if self.state == LockState.SEARCHING:
             cv2.putText(
@@ -230,12 +237,22 @@ class FaceLockSystem:
             if target_face is not None:
                 self.lost_frames = 0
                 f = target_face
-                
-                # Highlight Target
+
+                cv2.putText(
+                    vis,
+                    f"LOCKED: {self.target_name}",
+                    (10, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.8,
+                    (0, 255, 0),
+                    2
+                )
+
+                # Highlight Target (name + live confidence score)
                 cv2.rectangle(vis, (f.x1, f.y1), (f.x2, f.y2), (0, 255, 0), 3)
                 cv2.putText(
                     vis,
-                    f"TARGET: {self.target_name}",
+                    f"TARGET: {self.target_name} sim={target_sim:.2f}",
                     (f.x1, f.y1 - 10),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.6,
@@ -302,7 +319,7 @@ class FaceLockSystem:
 
 def main():
     cfg = argparse.ArgumentParser()
-    cfg.add_argument("--name", type=str, default="andrew", help="Target identity to lock onto")
+    cfg.add_argument("--name", type=str, default="irere", help="Target identity to lock onto")
     args = cfg.parse_args()
     
     # Init
@@ -325,16 +342,16 @@ def main():
     system = FaceLockSystem(args.name, matcher, det)
     
     cap = open_camera()
-    print("Mask Locking System Started. Press 'q' to quit.")
-    
+    print("Face Locking System Started. Press 'q' to quit.")
+
     while True:
         ok, frame = cap.read()
         if not ok: break
-        
+
         # Mirror the frame (user requested to "remove" the flip, implying they want the opposite of current)
         frame = cv2.flip(frame, 1)
-        
-        vis, _ = system.process_frame(frame, embedder)
+
+        vis, _target, _state = system.process_frame(frame, embedder)
         
         cv2.imshow("Face Locking", vis)
         if cv2.waitKey(1) & 0xFF == ord('q'):

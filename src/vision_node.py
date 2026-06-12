@@ -7,6 +7,7 @@ Topic: vision/team313/movement
 
 import time
 import argparse
+import csv
 import cv2
 import json
 import numpy as np
@@ -28,24 +29,31 @@ from src.haar_5pt import Haar5ptDetector
 from src.recognize import ArcFaceEmbedderONNX, FaceDBMatcher, load_db_npz
 from src.face_locking import FaceLockSystem, LockState
 
-# Configuration'
-DEFAULT_BROKER = "10.12.75.96" 
+# Configuration
+DEFAULT_BROKER = "localhost"  # override with --broker <ip> on exam day
 PORT = 1883
 TEAM_ID = "dragonfly"
 TOPIC_MOVEMENT = f"vision/{TEAM_ID}/movement"
 TOPIC_HEARTBEAT = f"vision/{TEAM_ID}/heartbeat"
+# Snapshots carry a base64 JPEG (tens of KB). They go on their own topic so the
+# movement topic stays tiny: the ESP8266 PubSubClient buffer is only 256 bytes
+# and silently drops any packet bigger than that.
+TOPIC_SNAPSHOT = f"vision/{TEAM_ID}/snapshot"
 
 
 
 class VisionNode:
-    def __init__(self, broker, port, target_name):
+    def __init__(self, broker, port, target_name, dist_thresh=0.60):
         if mqtt is None:
             raise RuntimeError(
                 f"paho-mqtt import failed: {_MQTT_IMPORT_ERROR}\n"
                 "Install dependencies with: pip install -r requirements.txt"
             )
-        # MQTT Setup
-        self.client = mqtt.Client(client_id=f"{TEAM_ID}_vision_node")
+        # MQTT Setup (paho-mqtt 2.x callback API)
+        self.client = mqtt.Client(
+            mqtt.CallbackAPIVersion.VERSION2,
+            client_id=f"{TEAM_ID}_vision_node",
+        )
         self.client.on_connect = self.on_connect
         self.client.connect(broker, port, 60)
         self.client.loop_start()
@@ -65,37 +73,61 @@ class VisionNode:
         if target_name not in db:
             print(f"WARNING: Target '{target_name}' not in database. Available: {list(db.keys())}")
         
-        self.matcher = FaceDBMatcher(db, dist_thresh=0.60)
+        self.matcher = FaceDBMatcher(db, dist_thresh=dist_thresh)
         self.system = FaceLockSystem(target_name, self.matcher, self.det)
-        
+
         self.running = True
         self.last_heartbeat = 0
         self.last_publish_time = 0
         self.mqtt_topic = TOPIC_MOVEMENT
         self.snapshot_sent = False  # Track if we've sent the face snapshot
-        # Remember last non-NO_FACE status while locked so we can hold position
-        self.last_status = "CENTERED"
 
-    def on_connect(self, client, userdata, flags, rc):
-        print(f"Connected to MQTT Broker with result code {rc}")
+        # Evidence log (Activity 5): timestamp, speaker, confidence, command
+        log_dir = Path("data/logs")
+        log_dir.mkdir(parents=True, exist_ok=True)
+        self.log_file = log_dir / f"commands_{time.strftime('%Y%m%d%H%M%S')}.csv"
+        with open(self.log_file, "w", newline="", encoding="utf-8") as f:
+            csv.writer(f).writerow(
+                ["timestamp", "iso_time", "speaker", "confidence", "command", "locked"]
+            )
+        print(f"[log] Evidence log: {self.log_file}")
+
+    def on_connect(self, client, userdata, flags, reason_code, properties):
+        print(f"Connected to MQTT Broker with result code {reason_code}")
         self.publish_heartbeat()
 
-    def publish_movement(self, status, confidence=1.0, target=None, locked=False, face_image=None):
+    def log_command(self, ts, speaker, confidence, command, locked):
+        with open(self.log_file, "a", newline="", encoding="utf-8") as f:
+            csv.writer(f).writerow([
+                f"{ts:.3f}",
+                time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(ts)),
+                speaker,
+                f"{float(confidence):.4f}",
+                command,
+                int(locked),
+            ])
+
+    def publish_movement(self, status, confidence=0.0, target=None, locked=False, face_image=None):
+        now = time.time()
         payload = {
             "status": status,
-            "confidence": confidence,
+            "confidence": round(float(confidence), 4),
             "target": target,
             "locked": locked,
-            "timestamp": time.time()
+            "timestamp": now
         }
-        
-        # Add face image if available
+
+        self.client.publish(self.mqtt_topic, json.dumps(payload))
+
+        # The (large) face snapshot goes to its own topic for the dashboard only
         if face_image is not None:
             _, buffer = cv2.imencode('.jpg', face_image, [cv2.IMWRITE_JPEG_QUALITY, 70])
-            payload["face_image"] = base64.b64encode(buffer).decode('utf-8')
-        
-        self.client.publish(self.mqtt_topic, json.dumps(payload))
-        print(f"Published: {status} (image: {'yes' if face_image is not None else 'no'})")
+            snap = dict(payload)
+            snap["face_image"] = base64.b64encode(buffer).decode('utf-8')
+            self.client.publish(TOPIC_SNAPSHOT, json.dumps(snap))
+
+        self.log_command(now, target, confidence, status, locked)
+        print(f"Published: {status} (conf={confidence:.2f}, image: {'yes' if face_image is not None else 'no'})")
 
     def publish_heartbeat(self):
         payload = {
@@ -163,22 +195,23 @@ class VisionNode:
                         status = "MOVE_RIGHT"
                     else:
                         status = "CENTERED"
-
-                    # Remember last good command while locked
-                    self.last_status = status
                 else:
                     # Temporarily lost target but still within LOCKED hysteresis.
-                    # Hold the last movement/center command instead of forcing search.
-                    if self.last_status == "NO_FACE":
-                        status = "CENTERED"
-                    else:
-                        status = self.last_status
-            
+                    # Hold position: repeating the last MOVE_* at 10 Hz would pan
+                    # the camera away from a briefly occluded speaker.
+                    status = "CENTERED"
+
             # --- RATE LIMITING (10Hz) ---
             current_time = time.time()
             if current_time - self.last_publish_time >= 0.1:
                 is_locked = (status != "NO_FACE")
-                self.publish_movement(status, target=self.system.target_name, locked=is_locked, face_image=face_crop)
+                self.publish_movement(
+                    status,
+                    confidence=self.system.last_similarity,
+                    target=self.system.target_name,
+                    locked=is_locked,
+                    face_image=face_crop,
+                )
                 self.last_publish_time = current_time
             
             # Heartbeat every 5s
@@ -193,12 +226,17 @@ class VisionNode:
         cap.release()
         cv2.destroyAllWindows()
         self.client.loop_stop()
+        self.client.disconnect()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--broker", type=str, default=DEFAULT_BROKER, help="MQTT Broker Address")
-    parser.add_argument("--name", type=str, default="andrew", help="Target name to lock onto")
+    parser.add_argument("--name", type=str, default="irere", help="Target name to lock onto")
+    parser.add_argument(
+        "--thresh", type=float, default=0.60,
+        help="Cosine DISTANCE threshold (lower = stricter). Tune with: python -m src.evaluate",
+    )
     args = parser.parse_args()
 
-    node = VisionNode(args.broker, PORT, args.name)
+    node = VisionNode(args.broker, PORT, args.name, dist_thresh=args.thresh)
     node.run()
