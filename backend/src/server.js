@@ -6,7 +6,7 @@ const path = require('path');
 
 // Configuration
 // Override with: MQTT_BROKER=mqtt://<broker-ip> npm start
-const MQTT_BROKER = process.env.MQTT_BROKER || 'mqtt://localhost';
+const MQTT_BROKER = 'mqtt://192.168.1.199';
 const TEAM_ID = 'dragonfly';
 const MQTT_TOPIC_VS = `vision/${TEAM_ID}/movement`;
 const MQTT_TOPIC_SNAP = `vision/${TEAM_ID}/snapshot`;   // face snapshot (base64 JPEG)
