@@ -135,7 +135,8 @@ class FaceLockSystem:
         
         self.locked_frames = 0
         self.lost_frames = 0
-        self.MAX_LOST_FRAMES = 10  # Tolerance before unlocking
+        self.MAX_LOST_SECONDS = 2.0  # Tolerance before unlocking
+        self.last_target_seen = 0.0
         # Similarity of the target in the most recent frame (0.0 when not visible)
         self.last_similarity = 0.0
 
@@ -227,6 +228,7 @@ class FaceLockSystem:
             if target_face is not None:
                 self.state = LockState.LOCKED
                 self.lost_frames = 0
+                self.last_target_seen = time.time()
                 self.log_action("LOCK_ACQUIRED", f"sim={target_sim:.2f}")
 
         # Note: If we just transitioned to LOCKED, we fall through to this block if we use 'if' 
@@ -236,6 +238,7 @@ class FaceLockSystem:
         if self.state == LockState.LOCKED:
             if target_face is not None:
                 self.lost_frames = 0
+                self.last_target_seen = time.time()
                 f = target_face
 
                 cv2.putText(
@@ -291,6 +294,7 @@ class FaceLockSystem:
             else:
                 # Target not found this frame
                 self.lost_frames += 1
+                lost_for = time.time() - self.last_target_seen
                 cv2.putText(
                     vis,
                     f"LOCKED: {self.target_name}", # Header matches
@@ -302,7 +306,7 @@ class FaceLockSystem:
                 )
                 cv2.putText(
                     vis,
-                    f"LOST ({self.lost_frames}/{self.MAX_LOST_FRAMES})",
+                    f"LOST ({lost_for:.1f}/{self.MAX_LOST_SECONDS:.1f}s)",
                     (10, 60),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.7,
@@ -310,7 +314,7 @@ class FaceLockSystem:
                     2
                 )
 
-                if self.lost_frames > self.MAX_LOST_FRAMES:
+                if lost_for > self.MAX_LOST_SECONDS:
                     self.state = LockState.SEARCHING
                     self.log_action("LOCK_LOST", "Target disappeared")
 

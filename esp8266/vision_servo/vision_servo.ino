@@ -33,21 +33,48 @@ int sweepStep = SWEEP_STEP_DEG;
 // --- Watchdog Timer Variables ---
 unsigned long lastFaceDetectTime = 0;
 const unsigned long FACE_TIMEOUT = 2000; // 2 seconds without a face triggers a search
+const unsigned long WIFI_CONNECT_TIMEOUT = 15000;
+const unsigned long WIFI_RECONNECT_INTERVAL = 10000;
+const unsigned long MQTT_RECONNECT_INTERVAL = 5000;
 
 WiFiClient espClient;
 PubSubClient client(espClient);
 unsigned long lastMqttReconnectAttempt = 0;
+unsigned long lastWiFiReconnectAttempt = 0;
 
 void setup_wifi() {
   delay(10);
   Serial.println("\nConnecting to WiFi...");
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
+  unsigned long start = millis();
+  while (WiFi.status() != WL_CONNECTED && millis() - start < WIFI_CONNECT_TIMEOUT) {
     delay(500);
     Serial.print(".");
   }
-  Serial.println("\nWiFi connected");
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("\nWiFi connected");
+    Serial.print("IP address: ");
+    Serial.println(WiFi.localIP());
+  } else {
+    Serial.println("\nWiFi not connected yet; continuing servo search while reconnecting.");
+  }
+}
+
+void ensure_wifi() {
+  if (WiFi.status() == WL_CONNECTED) {
+    return;
+  }
+
+  unsigned long now = millis();
+  if (lastWiFiReconnectAttempt != 0 && now - lastWiFiReconnectAttempt < WIFI_RECONNECT_INTERVAL) {
+    return;
+  }
+
+  lastWiFiReconnectAttempt = now;
+  Serial.println("Reconnecting WiFi...");
+  WiFi.disconnect();
+  WiFi.begin(ssid, password);
 }
 
 void moveServo(int delta) {
@@ -79,7 +106,11 @@ void callback(char* topic, byte* payload, unsigned int length) {
     lastFaceDetectTime = millis(); // Reset the timer!
     moveServo(TRACK_STEP_DEG);        
   } 
-  else if (message.indexOf("CENTERED") >= 0) {
+  else if (
+    message.indexOf("CENTERED") >= 0 ||
+    message.indexOf("HOLD") >= 0 ||
+    message.indexOf("LOCKED") >= 0
+  ) {
     isSearching = false; 
     lastFaceDetectTime = millis(); // Reset the timer!
   } 
@@ -89,8 +120,12 @@ void callback(char* topic, byte* payload, unsigned int length) {
 }
 
 bool reconnect() {
+  if (WiFi.status() != WL_CONNECTED) {
+    return false;
+  }
+
   unsigned long now = millis();
-  if (now - lastMqttReconnectAttempt < 5000) {
+  if (lastMqttReconnectAttempt != 0 && now - lastMqttReconnectAttempt < MQTT_RECONNECT_INTERVAL) {
     return false;
   }
 
@@ -120,10 +155,14 @@ void setup() {
 }
 
 void loop() {
-  if (!client.connected()) {
-    reconnect();
-  } else {
-    client.loop();
+  ensure_wifi();
+
+  if (WiFi.status() == WL_CONNECTED) {
+    if (!client.connected()) {
+      reconnect();
+    } else {
+      client.loop();
+    }
   }
 
   unsigned long now = millis();
@@ -155,7 +194,7 @@ void loop() {
 
   // --- SYSTEM HEARTBEAT ---
   static unsigned long lastHeartbeat = 0;
-  if (now - lastHeartbeat > 5000) {
+  if (client.connected() && now - lastHeartbeat > 5000) {
     lastHeartbeat = now;
     String heartbeat = "{\"node\": \"esp8266\", \"status\": \"ONLINE\"}";
     client.publish(topic_heartbeat, heartbeat.c_str());

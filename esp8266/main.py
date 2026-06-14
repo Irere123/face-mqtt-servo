@@ -1,5 +1,6 @@
 from machine import Pin, PWM
 from umqtt.simple import MQTTClient
+import network
 import time
 import ujson
 
@@ -25,6 +26,8 @@ TRACK_STEP = 3          # duty units per MOVE_LEFT / MOVE_RIGHT command
 SWEEP_STEP = 1          # duty units per sweep tick while searching
 SWEEP_INTERVAL_MS = 60  # sweep tick period
 FACE_TIMEOUT_MS = 2000  # silence on movement topic -> back to search mode
+MQTT_RECONNECT_MS = 5000
+HEARTBEAT_INTERVAL_S = 10
 
 current_duty = CENTER_DUTY
 searching = True        # start in search mode until the target is found
@@ -59,7 +62,7 @@ def sub_cb(topic, msg):
             searching = False
             last_face_ms = time.ticks_ms()
             set_servo(current_duty + TRACK_STEP)
-        elif status == "CENTERED":
+        elif status == "CENTERED" or status == "HOLD" or status == "LOCKED":
             # Target centered: hold position
             searching = False
             last_face_ms = time.ticks_ms()
@@ -71,12 +74,11 @@ def sub_cb(topic, msg):
         print("Error parsing JSON:", e)
 
 
-def main():
-    global searching, sweep_dir
-    print("Starting MQTT Client...")
-
-    # Initialize Servo to Center
-    set_servo(CENTER_DUTY)
+def connect_mqtt():
+    wlan = network.WLAN(network.STA_IF)
+    if not wlan.isconnected():
+        print("WiFi not connected; MQTT retry skipped.")
+        return None
 
     try:
         client = MQTTClient(CLIENT_ID, MQTT_BROKER)
@@ -85,48 +87,77 @@ def main():
         print("Connected to MQTT Broker:", MQTT_BROKER)
         client.subscribe(TOPIC_SUB)
         print("Subscribed to:", TOPIC_SUB)
+        return client
+    except Exception as e:
+        print("MQTT connect failed:", e)
+        return None
 
-        last_heartbeat = 0
-        last_sweep = time.ticks_ms()
 
-        while True:
-            # Check for messages
-            client.check_msg()
-            now = time.ticks_ms()
+def main():
+    global searching, sweep_dir
+    print("Starting MQTT Client...")
 
-            # Watchdog: no command for FACE_TIMEOUT_MS -> resume searching
-            if not searching and time.ticks_diff(now, last_face_ms) > FACE_TIMEOUT_MS:
-                print("Face lost! Starting search sweep...")
-                searching = True
+    # Initialize Servo to Center
+    set_servo(CENTER_DUTY)
 
-            # Non-blocking search sweep between MIN and MAX
-            if searching and time.ticks_diff(now, last_sweep) > SWEEP_INTERVAL_MS:
-                last_sweep = now
-                nxt = current_duty + sweep_dir
-                if nxt >= MAX_DUTY:
-                    nxt = MAX_DUTY
-                    sweep_dir = -SWEEP_STEP
-                elif nxt <= MIN_DUTY:
-                    nxt = MIN_DUTY
-                    sweep_dir = SWEEP_STEP
-                set_servo(nxt)
+    client = None
+    last_heartbeat = 0
+    last_sweep = time.ticks_ms()
+    last_mqtt_attempt = time.ticks_add(time.ticks_ms(), -MQTT_RECONNECT_MS)
 
-            # Heartbeat every 10s
-            if time.time() - last_heartbeat > 10:
-                payload = ujson.dumps(
-                    {"node": "esp8266", "status": "ONLINE", "uptime": time.time()}
-                )
+    while True:
+        now = time.ticks_ms()
+
+        if client is None and time.ticks_diff(now, last_mqtt_attempt) >= MQTT_RECONNECT_MS:
+            last_mqtt_attempt = now
+            client = connect_mqtt()
+
+        if client is not None:
+            try:
+                # Check for messages
+                client.check_msg()
+            except Exception as e:
+                print("MQTT error:", e)
+                try:
+                    client.disconnect()
+                except Exception:
+                    pass
+                client = None
+
+        # Watchdog: no command for FACE_TIMEOUT_MS -> resume searching
+        if not searching and time.ticks_diff(now, last_face_ms) > FACE_TIMEOUT_MS:
+            print("Face lost! Starting search sweep...")
+            searching = True
+
+        # Non-blocking search sweep between MIN and MAX
+        if searching and time.ticks_diff(now, last_sweep) > SWEEP_INTERVAL_MS:
+            last_sweep = now
+            nxt = current_duty + sweep_dir
+            if nxt >= MAX_DUTY:
+                nxt = MAX_DUTY
+                sweep_dir = -SWEEP_STEP
+            elif nxt <= MIN_DUTY:
+                nxt = MIN_DUTY
+                sweep_dir = SWEEP_STEP
+            set_servo(nxt)
+
+        # Heartbeat every 10s when MQTT is connected
+        if client is not None and time.time() - last_heartbeat > HEARTBEAT_INTERVAL_S:
+            payload = ujson.dumps(
+                {"node": "esp8266", "status": "ONLINE", "uptime": time.time()}
+            )
+            try:
                 client.publish(TOPIC_PUB, payload)
                 last_heartbeat = time.time()
+            except Exception as e:
+                print("MQTT heartbeat failed:", e)
+                try:
+                    client.disconnect()
+                except Exception:
+                    pass
+                client = None
 
-            time.sleep_ms(20)
-
-    except Exception as e:
-        print("Error:", e)
-        print("Rebooting in 5 seconds...")
-        time.sleep(5)
-        import machine
-        machine.reset()
+        time.sleep_ms(20)
 
 
 if __name__ == "__main__":

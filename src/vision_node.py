@@ -43,7 +43,15 @@ TOPIC_SNAPSHOT = f"vision/{TEAM_ID}/snapshot"
 
 
 class VisionNode:
-    def __init__(self, broker, port, target_name, dist_thresh=0.60, camera_index=None):
+    def __init__(
+        self,
+        broker,
+        port,
+        target_name,
+        dist_thresh=0.60,
+        camera_index=None,
+        track_servo=False,
+    ):
         if mqtt is None:
             raise RuntimeError(
                 f"paho-mqtt import failed: {_MQTT_IMPORT_ERROR}\n"
@@ -83,6 +91,7 @@ class VisionNode:
         self.last_publish_time = 0
         self.mqtt_topic = TOPIC_MOVEMENT
         self.snapshot_sent = False  # Track if we've sent the face snapshot
+        self.track_servo = bool(track_servo)
 
         # Evidence log (Activity 5): timestamp, speaker, confidence, command
         log_dir = Path("data/logs")
@@ -185,17 +194,21 @@ class VisionNode:
                         self.snapshot_sent = True  # Mark as sent
                         print("📸 Face snapshot captured and will be sent")
 
-                    # Calculate Center
-                    cx = (f.x1 + f.x2) / 2.0
-                    cx_norm = cx / W
+                    if self.track_servo:
+                        # Calculate Center
+                        cx = (f.x1 + f.x2) / 2.0
+                        cx_norm = cx / W
 
-                    # Movement Logic
-                    # Deadband: 0.4 to 0.6 is CENTERED
-                    if cx_norm < 0.4:
-                        status = "MOVE_LEFT"
-                    elif cx_norm > 0.6:
-                        status = "MOVE_RIGHT"
+                        # Movement Logic
+                        # Deadband: 0.4 to 0.6 is CENTERED
+                        if cx_norm < 0.4:
+                            status = "MOVE_LEFT"
+                        elif cx_norm > 0.6:
+                            status = "MOVE_RIGHT"
+                        else:
+                            status = "CENTERED"
                     else:
+                        # Lock acquired: stop the sweep and hold the current servo position.
                         status = "CENTERED"
                 else:
                     # Temporarily lost target but still within LOCKED hysteresis.
@@ -206,7 +219,7 @@ class VisionNode:
             # --- RATE LIMITING (10Hz) ---
             current_time = time.time()
             if current_time - self.last_publish_time >= 0.1:
-                is_locked = (status != "NO_FACE")
+                is_locked = (lock_state == LockState.LOCKED)
                 self.publish_movement(
                     status,
                     confidence=self.system.last_similarity,
@@ -244,6 +257,11 @@ if __name__ == "__main__":
         default=None,
         help="Preferred OpenCV camera index, e.g. 1 for an external USB camera",
     )
+    parser.add_argument(
+        "--track-servo",
+        action="store_true",
+        help="Move the servo to track the locked face. By default, lock holds the servo still.",
+    )
     args = parser.parse_args()
 
     node = VisionNode(
@@ -252,5 +270,6 @@ if __name__ == "__main__":
         args.name,
         dist_thresh=args.thresh,
         camera_index=args.camera,
+        track_servo=args.track_servo,
     )
     node.run()
